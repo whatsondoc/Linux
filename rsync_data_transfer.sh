@@ -35,35 +35,77 @@ REMOTE_DIR=""																	## The directory on the remote server that the dat
 #-----------------#
 
 validation_checks() {
-## Checking that both mandatory parameters - source directory & thread value - have been provided as arguments:
-if [[ -z ${WORK_DIR} ]] || [[ -z ${THREADING} ]]
-then 
-    echo -e "\nMandatory arguments have not been specified:\n\tDirectory:\t${WORK_DIR}\n\tThread value:\t${THREADING}" 
-	help
-    exit 1
+if [[ -z ${USER } ]] || [[ -z ${REMOTE_HOST} ]] || [[ -z ${REMOTE_DIR} ]]
+then
+	echo -e "\nThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
+	echo -e "\nPlease use your favourite text editor to edit the script and populate the above variables."
+	TERMINATE="true"
 fi
-## Validation that passwordless authentication is enabled between source and destination machines (e.g. using ssh keys):
-ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit &> /dev/null
-## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
-if [[ $? = 0 ]]
+
+## Checking that both mandatory parameters - source directory & thread value - have been provided as arguments:
+if [[ -z ${SOURCE_DIR} ]] || [[ -z ${THREADING} ]]
 then 
-	echo -e "VALIDATED:\tPasswordless authentication to the remote server is in place.\n"
-else 
-	echo -e "\nERROR:\tCannot connect to the remote server without the use of a password\n"
-	exit 1
+    echo -e "\nMandatory arguments have not been specified:\n\tDirectory:\t${SOURCE_DIR}\n\tThread value:\t${THREADING}" 
+    TERMINATE="true"
 fi
 
 ## Checking for the existence of a trailing slash on the provided directory path:
-DIR_SLASH=$(echo ${WORK_DIR: -1})
+DIR_SLASH=$(echo ${SOURCE_DIR: -1})
 ## If there is a trailing slash, let's remove it from the path as the rsync syntax below includes the slash (and we don't want duplicate slashes):
 if [[ ${DIR_SLASH} == '/' ]]
-then WORK_DIR=$(echo ${WORK_DIR} | sed s'/.$//')
+then 
+	SOURCE_DIR=$(echo ${SOURCE_DIR} | sed s'/.$//')
+fi
+
+## Validation that passwordless authentication is enabled between source and destination servers (e.g. using ssh keys):
+ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit &> /dev/null
+## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
+if [[ $? == 0 ]]
+then 
+	echo -e "VALIDATED:\tPasswordless authentication to the remote server is in place.\n"
+else 
+	echo -e "\nERROR:\tCannot connect to the remote server without the use of a password.\n"
+	TERMINATE="true"
+fi
+
+## Checking that rsync is installed on the local server:
+if [[ -x $(command -v rsync) ]]
+then
+	echo -e "\nVALIDATED:\trsync is present on the local server.\n"
+else
+	echo -e "\nERROR:\trsync is not present on the local server (or, at least, not included in '$PATH').\n"
+	TERMINATE="true"
+fi
+
+## Checking rsync is installed on the remote server:
+ssh ${USER}@${REMOTE_HOST} 'command -v rsync 2&>1 /dev/null'
+## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
+if [[ $? == 0 ]]
+then
+	echo -e "\VALIDATED:\trsync is present on the remote server.\n"
+else
+	echo -e "\nERROR:\trsync is not present on the remote server (or, at least, not included in '$PATH').\n"
+	TERMINATE="true"
+
+## Checking the taskset command exists on the local server (as this is used to bind processes to CPUs):
+if ! [[ -x $(command -v taskset) ]]
+then 
+	echo -e "\nERROR: taskset is not present on this server (or, at least, not included in '$PATH'). It is typically available in the util-linux package in Linux.\n"
+	TERMINATE="true"
+fi
+
+## If any of the prior validation checks fail, then the help() function will be called and the script will exit: 
+if [[ ${TERMINATE} == "true" ]]
+then
+	help
+	exit 1
 fi
 }
 
 help() {
 	echo -e "\nHELP STATEMENT\nPlease execute the script specifying the parameters for source directory '-d' and number of parallel threads '-t' as an integer (i.e. not a floating point number)."
 	echo -e "\nExample usage:\n\n\t $ /path/to/script.sh -d /directory/with/files/to/send -t 32\n"
+	echo -e "\nPackages & commands required:\tssh; nproc; ps; awk; sed; rsync (on local server); rsync (on remote server); taskset; comm\n"
 }
 
 													
@@ -77,8 +119,8 @@ while getopts "hd:t:" OPTION
 do
 case "$OPTION"
 in
-    d) WORK_DIR=${OPTARG}														## The directory specified by the user from which to transfer files, parsed from the input value in the script argument
-		if [[ -d ${WORK_DIR} ]]													## Checking that the directory provided by the user at script invocation exists
+    d) SOURCE_DIR=${OPTARG}														## The directory specified by the user from which to transfer files, parsed from the input value in the script argument
+		if [[ -d ${SOURCE_DIR} ]]													## Checking that the directory provided by the user at script invocation exists
 		then 
 			echo -e "VALIDATED:\tSource directory provided exists."
 		else 
@@ -105,8 +147,8 @@ done
 validation_checks																## Calling the validation_checks function
 
 ## Creating the runtime variables:
-TOTAL_TASKS=$(find ${WORK_DIR} -type f | wc -l)									## The total number of files in the supplied directory path to be transferred
-FILE_QUEUE=( $(ls ${WORK_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
+TOTAL_TASKS=$(find ${SOURCE_DIR} -type f | wc -l)								## The total number of files in the supplied directory path to be transferred
+FILE_QUEUE=( $(ls ${SOURCE_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
 NUM_CPUS=$(( $(nproc) - 1 ))													## The number of CPUs to be used for transfers on the source server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
 
@@ -134,7 +176,7 @@ do
 					if [ ${FILE_INDEX} -lt ${TOTAL_TASKS} ]
         			then
 						## Defining CPU affinity for the transfer tasks (preventing the Linux scheduler from moving tasks between processors):
-						taskset -c ${CPU} rsync -a -e ssh ${WORK_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${USER}@${REMOTE_HOST}:${REMOTE_DIR} &
+						taskset -c ${CPU} rsync -a -e ssh ${SOURCE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${USER}@${REMOTE_HOST}:${REMOTE_DIR} &
 						## Adding a slight pause to allow for large creation of parallel tasks:
 						sleep 0.2s
 
@@ -159,7 +201,36 @@ do
 				echo -n "Remaining processes: `pidof rsync | wc -w`"
   				echo -n -e "\e[0K\r"
 			done
-			echo -e "\n\nOPERATION COMPLETE: Transferred ${FILE_INDEX} files to ${REMOTE_HOST}:${REMOTE_DIR}\n\n"
+
+			## Checking for differences between source target directories:
+			echo -e "\nChecking for the differences between source & remote directories..."
+			FILE_LISTS="/dev/shm/data-transfer-file-list"
+			find ${SOURCE_DIR} -type f | sort > ${FILE_LISTS}.source														## Capturing the contents of the source directory and storing in a temp file on local memory
+			ssh ${USER}@${REMOTE_HOST} 'find ${REMOTE_DIR} -type f | sort' > ${FILE_LISTS}.remote							## Capturing the contents of the remote directory and storing in a temp file on local memory
+			DIR_COMPARISON=( $(comm -23 ${FILE_LISTS}.source ${FILE_LISTS}.remote) )										## Comparing the source & remote directories from the temp files just created, and storing any differences in a variable array
+			
+			if [[ -n ${DIR_COMPARISON} ]]																					## A query on the variable with '-n' sees whether there is a value set. If there is, follow the loop... 
+			then
+				if [[ $(ls ${SOURCE_DIR} | wc -l) == ${TOTAL_TASKS} ]]														## Checking to see whether the current number of files in the source directory matches $TOTAL_TASKS, generated earlier in the script
+				then
+					echo -e "\nNot all files have been transferred during this operation."
+				else
+					echo -e "\nThere is a difference in the number of files present than when the transfer was initiated."
+				fi
+				echo -e "\nThe following files exist on the source but not on the destination:"
+				for DIFF_FILE in ${DIR_COMPARISON}																			## Looping through the variable array and printing the contents to stdout
+				do 
+					echo ${DIFF_FILE}
+				done	
+				echo -e "\nYou can re-run the script and rsync will send only those files that do not exist on the remote directory."
+			
+			else																											## The alternative, assuming there is no value stored in $DIR_COMPARISON 
+				echo -e "\nThe source and remote directories are in sync - all files were successfully transferred."
+			fi
+			rm ${FILE_LISTS}.source ${FILE_LISTS}.remote																	## Being good citizens and tidying up after ourselves
+
+			echo -e "\n\nOPERATION COMPLETE: Submitted ${FILE_INDEX} files for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\n\n"
+
 			exit 0
         fi
     done
