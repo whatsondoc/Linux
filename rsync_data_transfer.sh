@@ -9,6 +9,26 @@
 #		#		= Commenting line for exclusion (as per usual)	#
 #_______________________________________________________________#
 
+#-----------------#
+#    VARIABLES    #
+#-----------------#
+
+USER=""																			## The username required to establish a secure shell (ssh) connection to the remote host:
+#read -p "Username: " USER														## User prompts for interactive invocation. Commented out by default.
+
+REMOTE_HOST=""																	## The remote host name or IP address
+#read -p "Remote host: " REMOTE_HOST											## User prompts for interactive invocation. Commented out by default.
+
+REMOTE_DIR=""																	## The directory on the remote server that the data will be transferred into:
+#read -p "Remote directory: " REMOTE_DIR										## User prompts for interactive invocation. Commented out by default.
+
+
+	#-------------------------------------------------------------------------------#
+	## \																		 / ##
+	### { –––-–––– YOU SHOULD NOT NEED TO CHANGE ANYTHING FROM HERE ON –––-–––– } ###
+	## /																		 \ ##
+	#-------------------------------------------------------------------------------#
+
 
 #-----------------#
 #    FUNCTIONS    #
@@ -46,22 +66,6 @@ help() {
 	echo -e "\nExample usage:\n\n\t $ /path/to/script.sh -d /directory/with/files/to/send -t 32\n"
 }
 
-
-#-----------------#
-#    VARIABLES    #
-#-----------------#
-
-USER=""																			## The username required to establish a secure shell (ssh) connection to the remote host:
-#read -p "Username: " USER														## User prompts for interactive invocation. Commented out by default.
-
-REMOTE_HOST=""																	## The remote host name or IP address
-#read -p "Remote host: " REMOTE_HOST											## User prompts for interactive invocation. Commented out by default.
-
-REMOTE_DIR=""																	## The directory on the remote server that the data will be transferred into:
-#read -p "Remote directory: " REMOTE_DIR										## User prompts for interactive invocation. Commented out by default.
-
-
-### { ––––––– You should not need to change anything from here on ––––––– } ###
 													
 #--------------------#
 #    SCRIPT BLOCK    #
