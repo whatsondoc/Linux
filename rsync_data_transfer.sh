@@ -37,7 +37,7 @@ REMOTE_DIR=""																	## The directory on the remote server that the dat
 validation_checks() {
 if [[ -z ${USER} ]] || [[ -z ${REMOTE_HOST} ]] || [[ -z ${REMOTE_DIR} ]]
 then
-	echo -e "\nThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
+	echo -e "\nERROR:\tThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
 	echo -e "\nPlease use your favourite text editor to edit the script and populate the above variables."
 	TERMINATE="true"
 fi
@@ -45,7 +45,7 @@ fi
 ## Checking that both mandatory parameters - source directory & thread value - have been provided as arguments:
 if [[ -z ${SOURCE_DIR} ]] || [[ -z ${THREADING} ]]
 then 
-    echo -e "\nMandatory arguments have not been specified:\n\tDirectory:\t${SOURCE_DIR}\n\tThread value:\t${THREADING}" 
+    echo -e "\nERROR:\tMandatory arguments have not been specified:\n\tDirectory:\t${SOURCE_DIR}\n\tThread value:\t${THREADING}" 
     TERMINATE="true"
 fi
 
@@ -58,11 +58,11 @@ then
 fi
 
 ## Validation that passwordless authentication is enabled between source and destination servers (e.g. using ssh keys):
-ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit &> /dev/null
+ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit 2> /dev/null
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then 
-	echo -e "VALIDATED:\tPasswordless authentication to the remote server is in place.\n"
+	echo -e "\nVALIDATED:\tPasswordless authentication to the remote server is in place.\n"
 else 
 	echo -e "\nERROR:\tCannot connect to the remote server without the use of a password.\n"
 	TERMINATE="true"
@@ -78,7 +78,7 @@ else
 fi
 
 ## Checking rsync is installed on the remote server:
-ssh ${USER}@${REMOTE_HOST} 'command -v rsync 2&>1 /dev/null'
+ssh ${USER}@${REMOTE_HOST} 'command -v rsync' 2&>1 /dev/null
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then
@@ -114,6 +114,8 @@ help() {
 #    SCRIPT BLOCK    #
 #--------------------#
 
+TIMER_START=$(date +%s)															## Capturing the starting second count to be used to calculate the wall time
+
 echo -e "\nBeginning validation...\n"
 
 while getopts "hd:t:" OPTION
@@ -121,7 +123,7 @@ do
 case "$OPTION"
 in
     d) SOURCE_DIR=${OPTARG}														## The directory specified by the user from which to transfer files, parsed from the input value in the script argument
-		if [[ -d ${SOURCE_DIR} ]]													## Checking that the directory provided by the user at script invocation exists
+		if [[ -d ${SOURCE_DIR} ]]												## Checking that the directory provided by the user at script invocation exists
 		then 
 			echo -e "VALIDATED:\tSource directory provided exists."
 		else 
@@ -152,6 +154,8 @@ TOTAL_TASKS=$(find ${SOURCE_DIR} -type f | wc -l)								## The total number of 
 FILE_QUEUE=( $(ls ${SOURCE_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
 NUM_CPUS=$(( $(nproc) - 1 ))													## The number of CPUs to be used for transfers on the source server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
+
+echo -e "\nSource directory:\t\t${SOURCE_DIR}\nRemote directory:\t\t${REMOTE_DIR}\nNumber of tasks:\t\t${TOTAL_TASKS}\nNumber of processors:\t\t${NUM_CPUS}\nThread count:\t\t${THREADING}\n"
 
 ## Sending table headings to stdout for transfer information:
 echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
@@ -204,10 +208,10 @@ do
 			done
 
 			## Checking for differences between source target directories:
-			echo -e "\nChecking for the differences between source & remote directories..."
+			echo -e "\n\nChecking for the differences between source & remote directories..."
 			FILE_LISTS="/dev/shm/data-transfer-file-list"
 			find ${SOURCE_DIR} -type f | sort > ${FILE_LISTS}.source														## Capturing the contents of the source directory and storing in a temp file on local memory
-			ssh ${USER}@${REMOTE_HOST} 'find ${REMOTE_DIR} -type f | sort' > ${FILE_LISTS}.remote							## Capturing the contents of the remote directory and storing in a temp file on local memory
+			ssh ${USER}@${REMOTE_HOST} "find ${REMOTE_DIR} -type f | sort" > ${FILE_LISTS}.remote							## Capturing the contents of the remote directory and storing in a temp file on local memory
 			DIR_COMPARISON=( $(comm -23 ${FILE_LISTS}.source ${FILE_LISTS}.remote) )										## Comparing the source & remote directories from the temp files just created, and storing any differences in a variable array
 			
 			if [[ -n ${DIR_COMPARISON} ]]																					## A query on the variable with '-n' sees whether there is a value set. If there is, follow the loop... 
@@ -221,7 +225,7 @@ do
 				echo -e "\nThe following files exist on the source but not on the destination:"
 				for DIFF_FILE in ${DIR_COMPARISON}																			## Looping through the variable array and printing the contents to stdout
 				do 
-					echo ${DIFF_FILE}
+					echo -e "\t${DIFF_FILE}"
 				done	
 				echo -e "\nYou can re-run the script and rsync will send only those files that do not exist on the remote directory."
 			
@@ -231,6 +235,11 @@ do
 			rm ${FILE_LISTS}.source ${FILE_LISTS}.remote																	## Being good citizens and tidying up after ourselves
 
 			echo -e "\n\nOPERATION COMPLETE: Submitted ${FILE_INDEX} files for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\n\n"
+
+			TIMER_END=$(date +%s)																							## Capturing the end second count
+			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))															## Calculating the difference
+			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})														## Converting the second delta into a human readable time format (HH:MM:SS)
+			echo -e "\n\nWall time: ${TIMER_READABLE}\n"																	## And printing it to stdout
 
 			exit 0
         fi
