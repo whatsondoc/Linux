@@ -46,7 +46,7 @@ do
 			pwd
 		fi
 	
-		cd ~ # Returning home to avoid issues if cd is denied due to permissions...
+		cd - # Returning home to avoid issues if cd is denied due to permissions...
 	
 		echo -e "\nWriting to: "
 		touch ${BDIR}$FS/$dir/${TFN}
