@@ -35,7 +35,7 @@ REMOTE_DIR=""																	## The directory on the remote server that the dat
 #-----------------#
 
 validation_checks() {
-if [[ -z ${USER } ]] || [[ -z ${REMOTE_HOST} ]] || [[ -z ${REMOTE_DIR} ]]
+if [[ -z ${USER} ]] || [[ -z ${REMOTE_HOST} ]] || [[ -z ${REMOTE_DIR} ]]
 then
 	echo -e "\nThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
 	echo -e "\nPlease use your favourite text editor to edit the script and populate the above variables."
@@ -82,10 +82,11 @@ ssh ${USER}@${REMOTE_HOST} 'command -v rsync 2&>1 /dev/null'
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then
-	echo -e "\VALIDATED:\trsync is present on the remote server.\n"
+	echo -e "\nVALIDATED:\trsync is present on the remote server.\n"
 else
 	echo -e "\nERROR:\trsync is not present on the remote server (or, at least, not included in '$PATH').\n"
 	TERMINATE="true"
+fi
 
 ## Checking the taskset command exists on the local server (as this is used to bind processes to CPUs):
 if ! [[ -x $(command -v taskset) ]]
