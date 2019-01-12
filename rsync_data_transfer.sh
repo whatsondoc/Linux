@@ -45,7 +45,7 @@ fi
 ## Checking that both mandatory parameters - source directory & thread value - have been provided as arguments:
 if [[ -z ${SOURCE_DIR} ]] || [[ -z ${THREADING} ]]
 then 
-    echo -e "\nERROR:\tMandatory arguments have not been specified:\n\tDirectory:\t${SOURCE_DIR}\n\tThread value:\t${THREADING}" 
+    echo -e "\nERROR:\tMandatory arguments have not been specified:\n\tDirectory:\t\t${SOURCE_DIR}\n\t\tThread value:\t${THREADING}\n" 
     TERMINATE="true"
 fi
 
@@ -58,7 +58,7 @@ then
 fi
 
 ## Validation that passwordless authentication is enabled between source and destination servers (e.g. using ssh keys):
-ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit 2> /dev/null
+ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit 2>&1 /dev/null
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then 
@@ -78,7 +78,7 @@ else
 fi
 
 ## Checking rsync is installed on the remote server:
-ssh ${USER}@${REMOTE_HOST} 'command -v rsync' 2&>1 /dev/null
+ssh ${USER}@${REMOTE_HOST} 'command -v rsync' 2>&1 /dev/null
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then
@@ -208,7 +208,7 @@ do
 			done
 
 			## Checking for differences between source target directories:
-			echo -e "\n\nChecking for the differences between source & remote directories..."
+			echo -e "\n\n\nChecking for the differences between source & remote directories..."
 			FILE_LISTS="/dev/shm/data-transfer-file-list"
 			ls ${SOURCE_DIR} | sort > ${FILE_LISTS}.source																	## Capturing the contents of the source directory and storing in a temp file on local memory
 			ssh ${USER}@${REMOTE_HOST} "ls ${REMOTE_DIR} | sort" > ${FILE_LISTS}.remote										## Capturing the contents of the remote directory and storing in a temp file on local memory
@@ -239,8 +239,7 @@ do
 			TIMER_END=$(date +%s)																							## Capturing the end second count
 			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))															## Calculating the difference
 			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})														## Converting the second delta into a human readable time format (HH:MM:SS)
-			date
-			echo -e "Wall time: ${TIMER_READABLE}\n"																		## And printing it to stdout
+			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nWall time:\t\t${TIMER_READABLE}\n"										## And printing it to stdout with the date
 
 			exit 0
         fi
