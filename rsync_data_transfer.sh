@@ -62,7 +62,7 @@ ssh -o PasswordAuthentication=no -o BatchMode=yes ${USER}@${REMOTE_HOST} exit 2>
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then 
-	echo -e "\nVALIDATED:\tPasswordless authentication to the remote server is in place.\n"
+	echo -e "VALIDATED:\tPasswordless authentication to the remote server is in place.\n"
 else 
 	echo -e "\nERROR:\tCannot connect to the remote server without the use of a password.\n"
 	TERMINATE="true"
@@ -71,7 +71,7 @@ fi
 ## Checking that rsync is installed on the local server:
 if [[ -x $(command -v rsync) ]]
 then
-	echo -e "\nVALIDATED:\trsync is present on the local server.\n"
+	echo -e "VALIDATED:\trsync is present on the local server.\n"
 else
 	echo -e "\nERROR:\trsync is not present on the local server (or, at least, not included in '$PATH').\n"
 	TERMINATE="true"
@@ -82,7 +82,7 @@ ssh ${USER}@${REMOTE_HOST} 'command -v rsync' 2&>1 /dev/null
 ## An unsuccessful attempt will return a non-zero error code, which will fail the following check:
 if [[ $? == 0 ]]
 then
-	echo -e "\nVALIDATED:\trsync is present on the remote server.\n"
+	echo -e "VALIDATED:\trsync is present on the remote server.\n"
 else
 	echo -e "\nERROR:\trsync is not present on the remote server (or, at least, not included in '$PATH').\n"
 	TERMINATE="true"
@@ -155,7 +155,7 @@ FILE_QUEUE=( $(ls ${SOURCE_DIR}) )												## Creating a variable array that 
 NUM_CPUS=$(( $(nproc) - 1 ))													## The number of CPUs to be used for transfers on the source server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
 
-echo -e "\nSource directory:\t\t${SOURCE_DIR}\nRemote directory:\t\t${REMOTE_DIR}\nNumber of tasks:\t\t${TOTAL_TASKS}\nNumber of processors:\t\t${NUM_CPUS}\nThread count:\t\t${THREADING}\n"
+echo -e "\nSource directory:\t\t${SOURCE_DIR}\nRemote directory:\t\t${REMOTE_DIR}\nNumber of tasks:\t\t${TOTAL_TASKS}\nNumber of processors:\t\t${NUM_CPUS}\nThread count:\t\t\t${THREADING}\n"
 
 ## Sending table headings to stdout for transfer information:
 echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
@@ -210,8 +210,8 @@ do
 			## Checking for differences between source target directories:
 			echo -e "\n\nChecking for the differences between source & remote directories..."
 			FILE_LISTS="/dev/shm/data-transfer-file-list"
-			find ${SOURCE_DIR} -type f | sort > ${FILE_LISTS}.source														## Capturing the contents of the source directory and storing in a temp file on local memory
-			ssh ${USER}@${REMOTE_HOST} "find ${REMOTE_DIR} -type f | sort" > ${FILE_LISTS}.remote							## Capturing the contents of the remote directory and storing in a temp file on local memory
+			ls ${SOURCE_DIR} | sort > ${FILE_LISTS}.source																	## Capturing the contents of the source directory and storing in a temp file on local memory
+			ssh ${USER}@${REMOTE_HOST} "ls ${REMOTE_DIR} | sort" > ${FILE_LISTS}.remote										## Capturing the contents of the remote directory and storing in a temp file on local memory
 			DIR_COMPARISON=( $(comm -23 ${FILE_LISTS}.source ${FILE_LISTS}.remote) )										## Comparing the source & remote directories from the temp files just created, and storing any differences in a variable array
 			
 			if [[ -n ${DIR_COMPARISON} ]]																					## A query on the variable with '-n' sees whether there is a value set. If there is, follow the loop... 
@@ -223,7 +223,7 @@ do
 					echo -e "\nThere is a difference in the number of files present than when the transfer was initiated."
 				fi
 				echo -e "\nThe following files exist on the source but not on the destination:"
-				for DIFF_FILE in ${DIR_COMPARISON}																			## Looping through the variable array and printing the contents to stdout
+				for DIFF_FILE in ${DIR_COMPARISON[*]}																		## Looping through the variable array and printing the contents to stdout
 				do 
 					echo -e "\t${DIFF_FILE}"
 				done	
@@ -239,7 +239,8 @@ do
 			TIMER_END=$(date +%s)																							## Capturing the end second count
 			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))															## Calculating the difference
 			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})														## Converting the second delta into a human readable time format (HH:MM:SS)
-			echo -e "\n\nWall time: ${TIMER_READABLE}\n"																	## And printing it to stdout
+			date
+			echo -e "Wall time: ${TIMER_READABLE}\n"																		## And printing it to stdout
 
 			exit 0
         fi
