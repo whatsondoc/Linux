@@ -189,7 +189,7 @@ DATA_TRANSFER_COUNT="0"															## Enabling the capture of data volumes th
 echo -e "
 Source directory:\t\t${SOURCE_DIR}
 Remote directory:\t\t${REMOTE_DIR}
-Remote user@server:\t${USER}@${REMOTE_HOST}
+Remote user@server:\t\t${USER}@${REMOTE_HOST}
 Number of tasks:\t\t${TOTAL_TASKS}
 Number of processors:\t\t${PROCS}
 Thread count per CPU:\t\t${THREADING}\n"										## Printing the defined variables to stdout to create a record of the conditions
