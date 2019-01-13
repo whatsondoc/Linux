@@ -165,9 +165,9 @@ in
 		then
 			echo -e "VALIDATED:\tAll system processors selected."
 			PROCS=$(nproc)
-		elif ((${PROCS})) 2> /dev/null 											## Checking that the thread value provided is an integer (not a string nor a float)
+		elif [[ ${PROCS} != 0 ]] && ((${PROCS})) 2> /dev/null 					## Checking that the thread value provided is an integer (not a string nor a float)
 			then
-				echo -e "VALIDATED:\tProcessor value provided is an integer."
+				echo -e "VALIDATED:\tProcessor value provided is a non-zero integer."
 			else
 				echo -e "\nERROR:\tPlease specify an integer (whole number) for the number of processors to be used for the data transfer, or 'all' to specify all processors.\n"
 				help
@@ -179,7 +179,6 @@ in
 esac
 done
 
-echo -e "\nBeginning validation...\n"
 validation_checks																## Calling the validation_checks function
 
 ## Creating the runtime variables:
@@ -282,7 +281,7 @@ do
 			TIMER_END=$(date +%s)																								## Capturing the end second count
 			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))																## Calculating the difference
 			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})															## Converting the second delta into a human readable time format (HH:MM:SS)
-			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nWall time:\t\t${TIMER_READABLE}\n"											## And printing it to stdout with the date
+			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nWall time:\t${TIMER_READABLE}\n"											## And printing it to stdout with the date
 
 			exit 0
         fi
