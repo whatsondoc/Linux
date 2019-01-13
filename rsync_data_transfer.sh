@@ -35,22 +35,22 @@ validation_checks() {
 ## Checking that the variables in this script (above) have been populated:
 if [[ -z ${USER} ]] || [[ -z ${REMOTE_HOST} ]] || [[ -z ${REMOTE_DIR} ]]
 then
-	echo -e "\nERROR:\tThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
+	echo -e "\nERROR:\t\tThe following variables have not been defined within the script:\n\tUser:\t\t${USER}\n\tRemote Host:\t${REMOTE_HOST}\n\tRemote Directory:\t${REMOTE_DIR}"
 	echo -e "\nPlease use your favourite text editor to edit the script and populate the above variables."
 	TERMINATE="true"
 fi
 
-## Checking that both mandatory parameters - source directory & thread value - have been provided as arguments:
-if [[ -z ${SOURCE_DIR} ]] || [[ -z ${THREADING} ]]
+## Checking that all mandatory parameters - source directory, number of processors & thread value - have been provided as arguments:
+if [[ -z ${SOURCE_DIR} ]] || [[ -z ${PROCS} ]] || [[ -z ${THREADING} ]]
 then 
-    echo -e "\nERROR:\tMandatory arguments have not been specified:\n\tDirectory:\t\t${SOURCE_DIR}\n\t\tThread value:\t${THREADING}\n" 
+    echo -e "\nERROR:\t\tMandatory arguments have not been specified:\n\t\tDirectory:\t\t${SOURCE_DIR}\n\t\tNumber of CPUs:\t\t${PROCS}\n\t\tThread value:\t\t${THREADING}\n" 
     TERMINATE="true"
 fi
 
 ## Validating the integer provided for the number of processors: 
 if [[ ${PROCS} -gt $(nproc) ]]
 then
-	echo -e "\nERROR:\tThe number of processors specified is greater than the number of CPU cores on the local server.\n"
+	echo -e "\nERROR:\t\tThe number of processors specified is greater than the number of CPU cores on the local server.\n"
 	TERMINATE="true"
 fi
 
@@ -69,7 +69,7 @@ if [[ $? == 0 ]]
 then 
 	echo -e "VALIDATED:\tPasswordless authentication to the remote server is in place.\n"
 else 
-	echo -e "\nERROR:\tCannot connect to the remote server without the use of a password.\n"
+	echo -e "\nERROR:\t\tCannot connect to the remote server without the use of a password.\n"
 	TERMINATE="true"
 fi
 
@@ -78,7 +78,7 @@ if [[ -x $(command -v rsync) ]]
 then
 	echo -e "VALIDATED:\trsync is present on the local server.\n"
 else
-	echo -e "\nERROR:\trsync is not present on the local server (or, at least, not included in '$PATH').\n"
+	echo -e "\nERROR:\t\trsync is not present on the local server (or, at least, not included in '$PATH').\n"
 	TERMINATE="true"
 fi
 
@@ -96,21 +96,21 @@ if [[ $? == 0 ]]
 then
 	echo -e "VALIDATED:\trsync is present on the remote server.\n"
 else
-	echo -e "\nERROR:\trsync is not present on the remote server (or, at least, not included in '$PATH').\n"
+	echo -e "\nERROR:\t\trsync is not present on the remote server (or, at least, not included in '$PATH').\n"
 	TERMINATE="true"
 fi
 
 ## Checking the taskset command exists on the local server (as this is used to bind processes to CPUs):
 if ! [[ -x $(command -v taskset) ]]
 then 
-	echo -e "\nERROR: taskset is not present on this server (or, at least, not included in '$PATH'). It is typically available in the util-linux package in Linux.\n"
+	echo -e "\nERROR:\t\ttaskset is not present on this server (or, at least, not included in '$PATH'). It is typically available in the util-linux package in Linux.\n"
 	TERMINATE="true"
 fi
 
 ## Validating that the variable containing the number of processors is populated correctly. If 'nproc' isn't available, the variable value will be -1 and this will cause problems...
 if [[ ${NUM_CPUS} == "-1" ]]
 then
-	echo "Unable to accurately determine number of processors using 'nproc'. Make this program available (and in '$PATH') or manually amend the NUM_CPUS variable to proceed.\n"
+	echo "\nERROR:\t\tUnable to accurately determine number of processors using 'nproc'. Make this program available (and in '$PATH') or manually amend the NUM_CPUS variable to proceed.\n"
 	TERMINATE="true"
 fi
 
@@ -125,7 +125,7 @@ fi
 ## Defining the help function to be invoked if no arguments provided at runtime, or the validation checks fail:
 help() {
 	echo -e "\nHELP STATEMENT\nPlease execute the script specifying the parameters for source directory '-d', the number of processors '-p' as either 'all' or an integer, and the number of parallel threads '-t', also as an integer (i.e. not a floating point number)."
-	echo -e "\nExample usage:\v\t $ /path/to/script.sh -d /directory/with/files/to/send -p 4 -t 32\n"
+	echo -e "\nExample usage:\v\t $ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\n\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
 	echo -e "\nPackages & commands required:\tssh; nproc; ps; awk; sed; rsync (on local server); rsync (on remote server); taskset; comm\n"
 }
 
@@ -173,19 +173,20 @@ in
 				help
 				exit 1	
 		fi
+	;;
     h | *) help && exit 1														## Capturing all other input; providing the help() statement for non-ratified inputs
 	;;
 esac
 done
+
+echo -e "\nBeginning validation...\n"
+validation_checks																## Calling the validation_checks function
 
 ## Creating the runtime variables:
 TOTAL_TASKS=$(find ${SOURCE_DIR} -type f | wc -l)								## The total number of files in the supplied directory path to be transferred
 FILE_QUEUE=( $(ls ${SOURCE_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
 NUM_CPUS=$(( ${PROCS} - 1 ))													## The number of CPUs to be used for transfers on the source server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
-
-echo -e "\nBeginning validation...\n"
-validation_checks																## Calling the validation_checks function
 
 echo -e "
 Source directory:\t\t${SOURCE_DIR}
