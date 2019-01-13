@@ -4,7 +4,6 @@
 # Author: Ben Watson - @WhatsOnDoc								#
 # Date: December 2018											#
 # LEGEND:														#
-# 		#### 	= Major section									#
 # 		##		= Explanation									#
 #		#		= Commenting line for exclusion (as per usual)	#
 #_______________________________________________________________#
@@ -43,7 +42,7 @@ fi
 ## Checking that all mandatory parameters - source directory, number of processors & thread value - have been provided as arguments:
 if [[ -z ${SOURCE_DIR} ]] || [[ -z ${PROCS} ]] || [[ -z ${THREADING} ]]
 then 
-    echo -e "\nERROR:\t\tMandatory arguments have not been specified:\n\t\tDirectory:\t\t${SOURCE_DIR}\n\t\tNumber of CPUs:\t\t${PROCS}\n\t\tThread value:\t\t${THREADING}\n" 
+    echo -e "\nERROR:\t\tMandatory arguments have not been specified:\n\t\t\tDirectory:\t\t${SOURCE_DIR}\n\t\t\tNumber of CPUs:\t\t${PROCS}\n\t\t\tThread value:\t\t${THREADING}\n" 
     TERMINATE="true"
 fi
 
@@ -125,7 +124,7 @@ fi
 ## Defining the help function to be invoked if no arguments provided at runtime, or the validation checks fail:
 help() {
 	echo -e "\nHELP STATEMENT\nPlease execute the script specifying the parameters for source directory '-d', the number of processors '-p' as either 'all' or an integer, and the number of parallel threads '-t', also as an integer (i.e. not a floating point number)."
-	echo -e "\nExample usage:\v\t $ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\n\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
+	echo -e "\nExample usage:\v\t$ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\v\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
 	echo -e "\nPackages & commands required:\tssh; nproc; ps; awk; sed; rsync (on local server); rsync (on remote server); taskset; comm\n"
 }
 
@@ -133,8 +132,7 @@ help() {
 #--------------------#
 #    SCRIPT BLOCK    #
 #--------------------#
-
-TIMER_START=$(date +%s)															## Capturing the starting second count to be used to calculate the wall time
+echo -e "\n"
 
 while getopts "hd:t:p:" OPTION
 do
@@ -186,16 +184,20 @@ TOTAL_TASKS=$(find ${SOURCE_DIR} -type f | wc -l)								## The total number of 
 FILE_QUEUE=( $(ls ${SOURCE_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
 NUM_CPUS=$(( ${PROCS} - 1 ))													## The number of CPUs to be used for transfers on the source server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
+DATA_TRANSFER_COUNT="0"															## Enabling the capture of data volumes that pass through the transfer loops 
 
 echo -e "
 Source directory:\t\t${SOURCE_DIR}
 Remote directory:\t\t${REMOTE_DIR}
+Remote user@server:\t${USER}@${REMOTE_HOST}
 Number of tasks:\t\t${TOTAL_TASKS}
 Number of processors:\t\t${PROCS}
 Thread count per CPU:\t\t${THREADING}\n"										## Printing the defined variables to stdout to create a record of the conditions
 
 ## Sending table headings to stdout for transfer information:
 echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
+
+TIMER_START=$(date +%s)															## Capturing the starting second count to be used to calculate the wall time
 
 while true
 do
@@ -225,6 +227,9 @@ do
 						## Echo the current operation performed to stdout: 
                 		echo -e "${HOSTNAME}\t\t\t\t${CPU}\t\t${FILE_INDEX}\t\t${THREAD}\t\t${FILE_QUEUE[$FILE_INDEX]}"
 
+						## Capturing file size and incrementing the file size counter:
+						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(du -k ${SOURCE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
+
 						## Increment the file counter:
                 		((FILE_INDEX++))
 					else
@@ -245,43 +250,45 @@ do
 			done
 			echo -e "All processes complete."
 
+			TIMER_END=$(date +%s)																						## Capturing the end second count
+
 			## Checking for differences between source target directories:
 			if [[ -x $(command -v comm) ]]
 			then
 				echo -e "\v\vChecking for the differences between source & remote directories..."
-				FILE_LISTS="/dev/shm/data-transfer-file-list"																	## Storing the file lists in memory on the local server (should be pretty small)
-				ls ${SOURCE_DIR} | sort > ${FILE_LISTS}.source																	## Capturing the contents of the source directory and storing in a temp file on local memory
-				ssh ${USER}@${REMOTE_HOST} "ls ${REMOTE_DIR} | sort" > ${FILE_LISTS}.remote										## Capturing the contents of the remote directory and storing in a temp file on local memory
-				DIR_COMPARISON=( $(comm -23 ${FILE_LISTS}.source ${FILE_LISTS}.remote) )										## Comparing the source & remote directories from the temp files just created, and storing any differences in a variable array
+				FILE_LISTS="/dev/shm/data-transfer-file-list"															## Storing the file lists in memory on the local server (should be pretty small)
+				ls ${SOURCE_DIR} | sort > ${FILE_LISTS}.source															## Capturing the contents of the source directory and storing in a temp file on local memory
+				ssh ${USER}@${REMOTE_HOST} "ls ${REMOTE_DIR} | sort" > ${FILE_LISTS}.remote								## Capturing the contents of the remote directory and storing in a temp file on local memory
+				DIR_COMPARISON=( $(comm -23 ${FILE_LISTS}.source ${FILE_LISTS}.remote) )								## Comparing the source & remote directories from the temp files just created, and storing any differences in a variable array
 			
-				if [[ -n ${DIR_COMPARISON} ]]																					## A query on the variable with '-n' sees whether there is a value set. If there is, follow the loop... 
+				if [[ -n ${DIR_COMPARISON} ]]																			## A query on the variable with '-n' sees whether there is a value set. If there is, follow the loop... 
 				then
-					if [[ $(ls ${SOURCE_DIR} | wc -l) == ${TOTAL_TASKS} ]]														## Checking to see whether the current number of files in the source directory matches $TOTAL_TASKS, generated earlier in the script
+					if [[ $(ls ${SOURCE_DIR} | wc -l) == ${TOTAL_TASKS} ]]												## Checking to see whether the current number of files in the source directory matches $TOTAL_TASKS, generated earlier in the script
 					then
 						echo -e "\nNot all files have been transferred during this operation."
 					else
 						echo -e "\nThere is a difference in the number of files present than when the transfer was initiated."
 					fi
 					echo -e "\nThe following files exist on the source but not on the destination:"
-					for DIFF_FILE in ${DIR_COMPARISON[*]}																		## Looping through the variable array and printing the contents to stdout
+					for DIFF_FILE in ${DIR_COMPARISON[*]}																## Looping through the variable array and printing the contents to stdout
 					do 
 						echo -e "\t${DIFF_FILE}"
 					done	
 					echo -e "\nYou can re-run the script and rsync will send only those files that do not exist on the remote directory."
 				
-				else																											## The alternative, assuming there is no value stored in $DIR_COMPARISON 
+				else																									## The alternative, assuming there is no value stored in $DIR_COMPARISON 
 					echo -e "\nThe source and remote directories are in sync - all files were successfully transferred."
 				fi
-				rm ${FILE_LISTS}.source ${FILE_LISTS}.remote																	## Being good citizens and tidying up after ourselves
+				rm ${FILE_LISTS}.source ${FILE_LISTS}.remote															## Being good citizens and tidying up after ourselves
 			else
 				echo -e "The 'comm' comparison program is not available - skipping post-transfer directory comparison...\n"
 			fi
-			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\v"
+			DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"				## Deriving the TB transfer figure from the accumulated file size counts
+			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files at ${DATA_TRANSFER_COUNT} for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\v"
 
-			TIMER_END=$(date +%s)																								## Capturing the end second count
-			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))																## Calculating the difference
-			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})															## Converting the second delta into a human readable time format (HH:MM:SS)
-			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nWall time:\t${TIMER_READABLE}\n"											## And printing it to stdout with the date
+			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))														## Calculating the difference between start & end second values
+			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})													## Converting the second delta into a human readable time format (HH:MM:SS)...
+			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nTransfer wall time:\t${TIMER_READABLE}\n"							## ...And printing it to stdout with the date
 
 			exit 0
         fi
