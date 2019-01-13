@@ -124,7 +124,7 @@ fi
 ## Defining the help function to be invoked if no arguments provided at runtime, or the validation checks fail:
 help() {
 	echo -e "\nHELP STATEMENT\nPlease execute the script specifying the parameters for source directory '-d', the number of processors '-p' as either 'all' or an integer, and the number of parallel threads '-t', also as an integer (i.e. not a floating point number)."
-	echo -e "\nExample usage:\v\t$ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\v\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
+	echo -e "\nExample usage:\v\t$ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\n\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
 	echo -e "\nPackages & commands required:\tssh; nproc; ps; awk; sed; rsync (on local server); rsync (on remote server); taskset; comm\n"
 }
 
@@ -283,12 +283,17 @@ do
 			else
 				echo -e "The 'comm' comparison program is not available - skipping post-transfer directory comparison...\n"
 			fi
-			DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"				## Deriving the TB transfer figure from the accumulated file size counts
-			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files at ${DATA_TRANSFER_COUNT} for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\v"
+			if [[ -x $(command -v bc) ]]
+			then
+				DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"			## Deriving the TB transfer figure from the accumulated file size counts
+			else
+				echo -e "\nThe 'bc' program is not available, so the amount of data transferred will not be displayed..."
+			fi
+			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files `if [[ -n ${DATA_TRANSFER_COUNT} ]]; then echo "at ${DATA_TRANSFER_COUNT} "; fi`for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\v"
 
 			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))														## Calculating the difference between start & end second values
 			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})													## Converting the second delta into a human readable time format (HH:MM:SS)...
-			echo -e "Date:\t\t`date "+%a %d %b %Y"`\nTransfer wall time:\t${TIMER_READABLE}\n"							## ...And printing it to stdout with the date
+			echo -e "Date:\t\t\t`date "+%a %d %b %Y"`\nTransfer wall time:\t${TIMER_READABLE}\n"						## ...And printing it to stdout with the date
 
 			exit 0
         fi
