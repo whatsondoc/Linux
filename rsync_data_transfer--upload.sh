@@ -169,6 +169,7 @@ in
 		then
 			echo -e "VALIDATED:\tAll system processors selected."
 			PROCS=$(nproc)
+			NUM_CPUS=$(( ${PROCS} - 1 ))										## The number of CPUs to be used for transfers on the local server, less 1 as we number from 0
 		elif [[ ${PROCS} != 0 ]] && ((${PROCS})) 2> /dev/null 					## Checking that the thread value provided is an integer (not a string nor a float)
 			then
 				echo -e "VALIDATED:\tProcessor value provided is a non-zero integer."
@@ -188,7 +189,6 @@ validation_checks																## Calling the validation_checks function
 ## Creating the runtime variables:
 TOTAL_TASKS=$(find ${LOCAL_DIR} -type f | wc -l)								## The total number of files in the supplied directory path to be transferred
 FILE_QUEUE=( $(ls ${LOCAL_DIR}) )												## Creating a variable array that contains the file names that are to be transferred
-NUM_CPUS=$(( ${PROCS} - 1 ))													## The number of CPUs to be used for transfers on the local server, less 1 as we number from 0
 FILE_INDEX="0"																	## A simple file counter used to measure the number of tasks being undertaken
 DATA_TRANSFER_COUNT="0"															## Enabling the capture of data volumes that pass through the transfer loops 
 
@@ -203,11 +203,11 @@ Thread count per CPU:\t\t${THREADING}\n"										## Printing the defined variab
 ## If checksums are enabled, calculate the file checksums at the source:
 if [[ ${CHECKSUMS} == "YES" ]]
 then
-	echo -e "\nChecksum validation enabled - computing checksums on files in the source directory."
+	echo -e "\nChecksum validation enabled - computing checksums on files in the source directory..."
 	FILE_CHECKSUM_INDEX="0"
 	for FILE_CHECKSUM in ${FILE_QUEUE[*]}
 	do 
-		ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | cut -f1  >> /dev/shm/data-transfer-file-checksum.remote
+		echo "${FILE_CHECKSUM} `sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | awk '{print $1}'`"  >> /dev/shm/data-transfer-file-checksum.local
 		((FILE_CHECKSUM_INDEX++))
 	done
 	echo -e "Complete.\n"
@@ -249,21 +249,11 @@ do
 						taskset -c ${CPU} rsync -a -e ssh ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${USER}@${REMOTE_HOST}:${REMOTE_DIR} &
 						## Adding a slight pause to allow for large creation of parallel tasks:
 						#sleep 0.1s
+						## Binding the most recently started task on the remote server to a processor:
+						
 
 						## Echo the current operation performed to stdout: 
                 		echo -e "${HOSTNAME}\t\t\t\t${CPU}\t\t${FILE_INDEX}\t\t${THREAD}\t\t${FILE_QUEUE[$FILE_INDEX]}"
-
-						## If checksums are enabled, calculate the file checksum at the destination:
-                        if [[ ${CHECKSUMS} == "YES" ]]
-                        then
-                            FILE_CHECKSUM_DEST=$(sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | awk '{print $1}')
-                            ## And compare the destination checksum against the source:
-                            if ! [[ ${FILE_CHECKSUM_DEST} == $(awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote) ]]
-                            then
-                                FILE_CHECKSUM_SOURCE=$(awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote)
-                                echo -e "\vERROR:\t\tChecksum mismatch on: ${FILE_QUEUE[${FILE_INDEX}]}\vSource checksum: ${FILE_CHECKSUM_SOURCE}\nDestination checksum: ${FILE_CHECKSUM_DEST}\v"
-                            fi
-                        fi
 
 						## Capturing file size and incrementing the file size counter:
 						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(du -k ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
@@ -321,13 +311,37 @@ do
 			else
 				echo -e "The 'comm' comparison program is not available - skipping post-transfer directory comparison...\n"
 			fi
+			
+			## If checksums are enabled, calculate the file checksums at the destination:
+			if [[ ${CHECKSUMS} == "YES" ]]
+			then
+				echo -e "\nComputing checksums on files in the destination directory..."
+				FILE_CHECKSUM_INDEX="0"
+				for FILE_CHECKSUM in ${FILE_QUEUE[*]}
+				do 
+					ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | awk '{print $1}'  >> /dev/shm/data-transfer-file-checksum.remote
+					((FILE_CHECKSUM_INDEX++))
+				done
+				echo -e "Complete.\n"
+				CHECKSUM_COMPARISON=( $(comm -23 /dev/shm/data-transfer-file-checksum.local /dev/shm/data-transfer-file-checksum.remote) )		## Comparing the local & remote directories from the temp files just created, and storing any differences in a variable array
+                if [[ -n ${CHECKSUM_COMPARISON} ]]
+                then
+                    echo -e "\nERROR:\t\tChecksum mismatches have been detected:\n"
+                    for DIFF_CHECKSUM in ${CHECKSUM_COMPARISON[*]}														## Looping through the variable array and printing the contents to stdout
+					do 
+						echo -e "\t${DIFF_CHECKSUM}"
+					done
+                else
+                    echo -e "\nVALIDATED: SHA1 checksums computed, compared and validated.\n"
+                fi
+
 			if [[ -x $(command -v bc) ]]
 			then
 				DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"			## Deriving the TB transfer figure from the accumulated file size counts
 			else
 				echo -e "\nThe 'bc' program is not available, so the amount of data transferred will not be displayed..."
 			fi
-			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files `if [[ -n ${DATA_TRANSFER_COUNT} ]]; then echo "at ${DATA_TRANSFER_COUNT} "; fi`for transfer to ${REMOTE_HOST}:${REMOTE_DIR}\v"
+			echo -e "\vOPERATION COMPLETE: Submitted ${FILE_INDEX} files `if [[ -n ${DATA_TRANSFER_COUNT} ]]; then echo "at ${DATA_TRANSFER_COUNT} "; fi`for transfer from ${LOCAL_DIR} to ${REMOTE_HOST}:${REMOTE_DIR}\v"
 
 			TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))														## Calculating the difference between start & end second values
 			TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})													## Converting the second delta into a human readable time format (HH:MM:SS)...
