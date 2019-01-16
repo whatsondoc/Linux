@@ -208,27 +208,27 @@ Number of tasks:\t\t${TOTAL_TASKS}
 Number of processors:\t\t${PROCS}
 Thread count per CPU:\t\t${THREADING}\n"										## Printing the defined variables to stdout to create a record of the conditions
 
+## If checksums are enabled, calculate the file checksums at the source:
+if [[ ${CHECKSUMS} == "YES" ]]
+then
+    echo -e "\nChecksum validation enabled - computing checksums on files in the source directory."
+    FILE_CHECKSUM_INDEX="0"
+    for FILE_CHECKSUM in ${FILE_QUEUE[*]}
+    do 
+        ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | cut -f1  >> /dev/shm/data-transfer-file-checksum.remote
+        ((FILE_CHECKSUM_INDEX++))
+    done
+    echo -e "Complete.\n"
+fi
+
+## Capturing the starting second count to be used to calculate the transfer wall time:
+TIMER_START=$(date +%s)															
+
+## Sending table headings to stdout for transfer information:
+echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
+
 while true
 do
-    ## If checksums are enabled, calculate the file checksums at the source:
-    if [[ ${CHECKSUMS} == "YES" ]]
-    then
-        echo -e "\nChecksum validation enabled - computing checksums on files in the source directory."
-        FILE_CHECKSUM_INDEX="0"
-        for FILE_CHECKSUM in ${FILE_QUEUE[*]}
-        do 
-            ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | cut -f1  >> /dev/shm/data-transfer-file-checksum.remote
-            ((FILE_CHECKSUM_INDEX++))
-        done
-        echo -e "Complete.\n"
-    fi
-
-    ## Capturing the starting second count to be used to calculate the wall time:
-    TIMER_START=$(date +%s)															
-
-    ## Sending table headings to stdout for transfer information:
-    echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
-
 	## Cycling the available CPUs on the local server:
     for CPU in $(seq 0 ${NUM_CPUS})
     do
