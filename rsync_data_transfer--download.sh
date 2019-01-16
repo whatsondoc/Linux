@@ -208,13 +208,27 @@ Number of tasks:\t\t${TOTAL_TASKS}
 Number of processors:\t\t${PROCS}
 Thread count per CPU:\t\t${THREADING}\n"										## Printing the defined variables to stdout to create a record of the conditions
 
-## Sending table headings to stdout for transfer information:
-echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
-
-TIMER_START=$(date +%s)															## Capturing the starting second count to be used to calculate the wall time
-
 while true
 do
+    ## If checksums are enabled, calculate the file checksums at the source:
+    if [[ ${CHECKSUMS} == "YES" ]]
+    then
+        echo -e "\nChecksum validation enabled - computing checksums on files in the source directory."
+        FILE_CHECKSUM_INDEX="0"
+        for FILE_CHECKSUM in ${FILE_QUEUE[*]}
+        do 
+            ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | cut -f1  >> /dev/shm/data-transfer-file-checksum.remote
+            ((FILE_CHECKSUM_INDEX++))
+        done
+        echo -e "Complete.\n"
+    fi
+
+    ## Capturing the starting second count to be used to calculate the wall time:
+    TIMER_START=$(date +%s)															
+
+    ## Sending table headings to stdout for transfer information:
+    echo -e "\nHOSTNAME\t\t\t\tCPU\t\tTASK\t\tTHREAD\t\tFILE"
+
 	## Cycling the available CPUs on the local server:
     for CPU in $(seq 0 ${NUM_CPUS})
     do
@@ -233,16 +247,11 @@ do
                 	## Checking the FILE_INDEX against the TOTAL_TASKS again to make sure we don't create empty tasks:
 					if [ ${FILE_INDEX} -lt ${TOTAL_TASKS} ]
         			then
-						## If checksums are enabled, calculate the file checksum at the source:
-                        if [[ -z ${CHECKSUMS} ]]
-                        then
-                            FILE_CHECKSUM_SRC=$(ssh ${USER}@${REMOTE_HOST} sha1sum ${REMOTE_DIR}/${FILE_QUEUE[${FILE_INDEX}]})
-                        fi
-
+						
                         ## Defining CPU affinity for the transfer tasks (preventing the Linux scheduler from moving tasks between processors):
 						taskset -c ${CPU} rsync -a -e ssh ${USER}@${REMOTE_HOST}:${REMOTE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} &
 						## Adding a slight pause to allow for large creation of parallel tasks:
-						sleep 0.1s
+						#sleep 0.1s
 
 						## Echo the current operation performed to stdout: 
                 		echo -e "${HOSTNAME}\t\t\t\t${CPU}\t\t${FILE_INDEX}\t\t${THREAD}\t\t${FILE_QUEUE[$FILE_INDEX]}"
@@ -250,11 +259,12 @@ do
                         ## If checksums are enabled, calculate the file checksum at the destination:
                         if [[ ${CHECKSUMS} == "YES" ]]
                         then
-                            FILE_CHECKSUM_DEST=$(sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]})
+                            FILE_CHECKSUM_DEST=$(sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | awk '{print $1}')
                             ## And compare the destination checksum against the source:
-                            if ! [[ ${FILE_CHECKSUM_DEST} == ${FILE_CHECKSUM_SRC} ]]
+                            if ! [[ ${FILE_CHECKSUM_DEST} == $(awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote) ]]
                             then
-                                echo -e "\vERROR:\t\tChecksum mismatch on: ${FILE_QUEUE[${FILE_INDEX}]}\vSource checksum: ${FILE_CHECKSUM_SRC}\nDestination checksum: ${FILE_CHECKSUM_DEST}\v"
+                                FILE_CHECKSUM_SOURCE=$(awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote)
+                                echo -e "\vERROR:\t\tChecksum mismatch on: ${FILE_QUEUE[${FILE_INDEX}]}\vSource checksum: ${FILE_CHECKSUM_SOURCE}\nDestination checksum: ${FILE_CHECKSUM_DEST}\v"
                             fi
                         fi
 
