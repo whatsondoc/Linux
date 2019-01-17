@@ -105,6 +105,14 @@ else
 	TERMINATE="true"
 fi
 
+## Looking for pre-existing rsync processes on the remote server:
+REMOTE_PROCESSES=$(ssh ${USER}@${REMOTE_HOST} ps -e -o cmd | awk '$1=="rsync"')
+if [[ -n ${REMOTE_PROCESSES} ]]
+then
+	echo -e "\nADVISORY:\tThere are running rsync processes on the remote server:"
+	ssh ${USER}@${REMOTE_HOST} ps -e -o psr,cmd,pid | awk '$2=="rsync"'
+fi
+
 ## Checking the taskset command exists on the local server (as this is used to bind processes to CPUs):
 if ! [[ -x $(command -v taskset) ]]
 then 
@@ -238,25 +246,19 @@ do
 				do
                 	## Checking the FILE_INDEX against the TOTAL_TASKS again to make sure we don't create empty tasks:
 					if [ ${FILE_INDEX} -lt ${TOTAL_TASKS} ]
-        			then
-						## If checksums are enabled, calculate the file checksum at the source: 
-						if [[ ${CHECKSUMS} == "YES" ]]
-                        then
-                            FILE_CHECKSUM_SRC=$(sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]})
-                        fi
-						
+        			then			
 						## Defining CPU affinity for the transfer tasks (preventing the Linux scheduler from moving tasks between processors):
 						taskset -c ${CPU} rsync -a -e ssh ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${USER}@${REMOTE_HOST}:${REMOTE_DIR} &
 						## Adding a slight pause to allow for large creation of parallel tasks:
-						#sleep 0.1s
+						sleep 0.1s
 						## Binding the most recently started task on the remote server to a processor:
-						
+						## TBC ##
 
 						## Echo the current operation performed to stdout: 
                 		echo -e "${HOSTNAME}\t\t\t\t${CPU}\t\t${FILE_INDEX}\t\t${THREAD}\t\t${FILE_QUEUE[$FILE_INDEX]}"
 
 						## Capturing file size and incrementing the file size counter:
-						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(du -k ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
+						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(stat -c %s ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
 
 						## Increment the file counter:
                 		((FILE_INDEX++))
@@ -333,7 +335,8 @@ do
 					done
                 else
                     echo -e "\nVALIDATED: SHA1 checksums computed, compared and validated.\n"
-                fi
+				fi
+            fi
 
 			if [[ -x $(command -v bc) ]]
 			then

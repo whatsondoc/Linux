@@ -247,30 +247,18 @@ do
                 	## Checking the FILE_INDEX against the TOTAL_TASKS again to make sure we don't create empty tasks:
 					if [ ${FILE_INDEX} -lt ${TOTAL_TASKS} ]
         			then
-						
                         ## Defining CPU affinity for the transfer tasks (preventing the Linux scheduler from moving tasks between processors):
 						taskset -c ${CPU} rsync -a -e ssh ${USER}@${REMOTE_HOST}:${REMOTE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} ${LOCAL_DIR} &
 						## Adding a slight pause to allow for large creation of parallel tasks:
-						#sleep 0.1s
+						sleep 0.1s
                         ## Binding the most recently started task on the remote server to a processor:
-
+						## TBD ##
 
 						## Echo the current operation performed to stdout: 
                 		echo -e "${HOSTNAME}\t\t\t\t${CPU}\t\t${FILE_INDEX}\t\t${THREAD}\t\t${FILE_QUEUE[$FILE_INDEX]}"
 
-                        ## If checksums are enabled, calculate the file checksum at the destination:
-                        if [[ ${CHECKSUMS} == "YES" ]]
-                        then
-                            FILE_CHECKSUM_DEST=$(sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | awk '{print $1}')
-                            ## And compare the destination checksum against the source:
-                            if ! [[ ${FILE_CHECKSUM_DEST} == $(awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote) ]]
-                            then
-                                echo -e "\vERROR:\t\tChecksum mismatch on: ${FILE_QUEUE[${FILE_INDEX}]}\vSource checksum: `awk "NR==${FILE_INDEX}" /dev/shm/data-transfer-file-checksum.remote`\nDestination checksum: ${FILE_CHECKSUM_DEST}\v"
-                            fi
-                        fi
-
 						## Capturing file size and incrementing the file size counter:
-						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(ssh ${USER}@${REMOTE_HOST} du -k ${REMOTE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
+						DATA_TRANSFER_COUNT=$(( ${DATA_TRANSFER_COUNT} + $(ssh ${USER}@${REMOTE_HOST} stat -c %s ${REMOTE_DIR}/${FILE_QUEUE[${FILE_INDEX}]} | cut -f1) ))
 
 						## Increment the file counter:
                 		((FILE_INDEX++))
@@ -321,24 +309,25 @@ do
 				
 				else																									## The alternative, assuming there is no value stored in $DIR_COMPARISON 
 					echo -e "\nThe local and remote directories are in sync - all files were successfully transferred."
+                    COMPLETE_TRANSFER="true"
 				fi
 				rm ${FILE_LISTS}.local ${FILE_LISTS}.remote																## Being good citizens and tidying up after ourselves
 			else
 				echo -e "The 'comm' comparison program is not available - skipping post-transfer directory comparison...\n"
 			fi
 
-            ## If checksums are enabled, calculate the file checksums at the source:
+            ## If checksums are enabled, calculate the file checksums at the destination:
             if [[ ${CHECKSUMS} == "YES" ]]
             then
                 echo -e "\nChecksum validation enabled - computing checksums on files in the destination directory..."
                 FILE_CHECKSUM_INDEX="0"
                 for FILE_CHECKSUM in ${FILE_QUEUE[*]}
                 do 
-                    ssh ${USER}@${REMOTE_HOST} echo "${FILE_CHECKSUM} `sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | awk '{print $1}'`"  >> /dev/shm/data-transfer-file-checksum.local
+                    sha1sum ${LOCAL_DIR}/${FILE_QUEUE[${FILE_CHECKSUM_INDEX}]} | awk '{print $1}'  >> /dev/shm/data-transfer-file-checksum.local
                     ((FILE_CHECKSUM_INDEX++))
                 done
                 echo -e "Complete.\n"
-                CHECKSUM_COMPARISON=( $(comm -23 /dev/shm/data-transfer-file-checksum.local /dev/shm/data-transfer-file-checksum.remote) )		## Comparing the local & remote directories from the temp files just created, and storing any differences in a variable array
+                CHECKSUM_COMPARISON=( $(comm -23 /dev/shm/data-transfer-file-checksum.local /dev/shm/data-transfer-file-checksum.remote) )		## Comparing file checksums from the local & remote directories using the temp files created, and storing any differences in a variable array
                 if [[ -n ${CHECKSUM_COMPARISON} ]]
                 then
                     echo -e "\nERROR:\t\tChecksum mismatches have been detected:\n"
@@ -351,7 +340,7 @@ do
                 fi
             fi
 
-			if [[ -x $(command -v bc) ]]
+			if [[ -x $(command -v bc) ]] && [[ ${COMPLETE_TRANSFER} == "true" ]]
 			then
 				DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"			## Deriving the TB transfer figure from the accumulated file size counts
 			else
