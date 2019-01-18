@@ -138,7 +138,7 @@ fi
 ## Defining the help function to be invoked if no arguments provided at runtime, or the validation checks fail:
 help() {
 	echo -e "\nHELP STATEMENT\nPlease execute the script specifying the parameters for local directory '-d', the number of processors '-p' as either 'all' or an integer, and the number of parallel threads '-t', also as an integer (i.e. not a floating point number)."
-	echo -e "\nExample usage:\v\t$ /path/to/script.sh -d /directory/to/send/files -p ALL -t 16\n\t\t$ script.sh -d /remote/directory/ -p 4 -t 8\n"
+	echo -e "\nExample usage:\v\t$ /path/to/script.sh -d /local/directory/path -p ALL -t 16\n\t\t$ script.sh -d /local/directory/path -p 4 -t 8\n"
 	echo -e "\nPackages & commands required:\tssh; nproc; ps; awk; sed; rsync (on local server); rsync (on remote server); taskset; comm\n"
 }
 
@@ -299,7 +299,7 @@ do
 					else
 						echo -e "\nThere is a difference in the number of files present than when the transfer was initiated."
 					fi
-					echo -e "\nThe following files exist on the local but not on the destination:"
+					echo -e "\nThe following files exist on the source but not on the destination:"
 					for DIFF_FILE in ${DIR_COMPARISON[*]}																## Looping through the variable array and printing the contents to stdout
 					do 
 						echo -e "\t${DIFF_FILE}"
@@ -340,7 +340,7 @@ do
 
 			if [[ -x $(command -v bc) ]]
 			then
-				DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024" | bc -l)TB"			## Deriving the TB transfer figure from the accumulated file size counts
+				DATA_TRANSFER_COUNT="$(echo "scale=2; ${DATA_TRANSFER_COUNT} / 1024 / 1024 / 1024 / 1024" | bc -l)TB"			## Deriving the TB transfer figure from the accumulated file size counts
 			else
 				echo -e "\nThe 'bc' program is not available, so the amount of data transferred will not be displayed..."
 			fi
