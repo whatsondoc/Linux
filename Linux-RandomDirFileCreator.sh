@@ -1,175 +1,69 @@
 #!/bin/bash
 
-#############################################################################################
-#											    #
-# THE LINUX RANDOM DIRECTORY & FILE GENERATOR						    #
-# Author: Ben H. Watson									    #
-# Twitter: @WhatsOnStorage								    #
-# Blog: http://whatsonstorage.azurewebsites.net						    #
-# Date crafted: March 2014								    #
-#											    #
-# Please feel free to use, share, edit etc. this script, all feedback and callouts are	    #
-# appreciated!										    #
-#											    #
-#############################################################################################
+## Variables:
+ourlog="/tmp/FileGenerator.output"          # The directory path of the log file for this script operation
+tgtdir="/path/to/dir/for/file/creation"     # In which directory path should we create the directories & files
+num_dirs="160"                              # How many directories will be created?
+min_file_count="15"                         # Min number of files
+max_file_count="1000"                       # Max number of files
+small_file_size="1"                         # Smallest file size
+large_file_size="102400"                    # Largest file size
+block_size="64k"                            # Block size
+compressability="urandom"                   # Either 'urandom' or 'zero'
 
-## User prompted inputs
-
-read -p "Please specify a log directory  #  " ourlog
-while true
-do read -p "
-Shall we output the dd command stats to our log file?
-
-Bear in mind this may be quite a lot depending on the # of files & directories we create...  #  " ddoutput
-case $ddoutput in
-        [Yy]* ) ddoutput="yes"
-        break ;;
-        [Nn]* ) ddoutput="no"
-        break ;;
-        * ) echo "Please enter 'Yes' or 'No'...  " ;;
-esac
-done
-/bin/echo ""
-read -p "What directory shall we create this stuff in? Please don't include a trailing slash.  #  " tgtdir
+## Logging input options:
 /bin/echo "
-"
-read -p "How many directories do you want to create?  #  " numdirs
-/bin/echo "
-"
-/bin/echo "Maximum and minimums now...
-"
-/bin/echo "This script will produce a randomly generated number of files in each directory based on your following definitions.
-"
-read -p "What's the fewest number of files we should create in each directory?  #  " minfiles
-read -p "What's the greatest number of files we should create in each directory?  #  " maxfiles
-/bin/echo "
-This script will produce randomly sized files based on your following definitions.
-"
-read -p "Let's have a low input for the sizing, in KB?  #  " smallfile
-read -p "Now let's have a high input for the sizing, in KB?  #  " largefile
-/bin/echo ""
-read -p "And finally, the block size in KB?  #  " setblksize
-/bin/echo "
-"
-while true
-do
-        read -p "Do you want the files to be:
-        1.) Compressible?
-        2.) Non-compressible?
-
-        Please enter the corresponding value: 1.) or 2.)  #  " comp
-case $comp in
-        [1]* ) comp="zero"
-                break ;;
-        [2]* ) comp="urandom"
-                break ;;
-#       [3]* ) comp="***TBC--MIXED--TBC***"
-#                break ;;
-        * ) echo "Please enter the corresponding value: 1 or 2...  #  " ;;
-esac
-done
-
-## Processing user inputs
-
-if [ $comp == "zero" ]
-then compr="Compressible"
-elif [ $comp == "urandom" ]
-then compr="Non-compressible"
-fi
-if [ $ddoutput == "yes" ]
-then ddoutput=$ourlog
-elif [ $ddoutput == "no" ]
-then ddoutput="/dev/null"
-fi
-
-## Logging input options
-
-/bin/echo "
-#########################################################################
-#                                                                       #
-#               THE LINUX RANDOM DIRECTORY & FILE GENERATOR             #
-#                     `/bin/date`             #
-#                                                                       #
-#                Author: Ben H. Watson (@WhatsOnStorage)                #
-#           Blog Site: http://whatsonstorage.azurewebsites.net		#
-#########################################################################
-
-
 ________________________________________________________________________
-|VARIABLE                               |VALUE
-|---------------------------------------|-------------------------------
-|Target Mount Point                     |$tgtdir
-|Number of directories                  |$numdirs
-|Minimum # of files per directory       |$minfiles
-|Maximum # of files per directory       |$maxfiles
-|Smallest file to be created (in KB)    |$smallfile
-|Largest file to be created (in KB)     |$largefile
-|Compressability                        |$compr
-|Block size set for dd command          |$setblksize
-------------------------------------------------------------------------
+ VARIABLE                               | VALUE
+----------------------------------------|-------------------------------
+ Target Mount Point                     | ${tgtdir}
+ Number of directories                  | ${num_dirs}
+ Minimum # of files per directory       | ${min_file_count}
+ Maximum # of files per directory       | ${max_file_count}
+ Smallest file to be created (in KB)    | ${small_file_size}
+ Largest file to be created (in KB)     | ${large_file_size}
+ Compressability                        | ${compressability}
+ Block size set for dd command          | ${block_size}
+________________________________________________________________________
 
-Before we create our stuff:
-
-`/bin/df -h`
-
-------------------------
-Now let's get creating!
-" >> $ourlog
-
+"
 
 ## Directory & file creation starts here:
+dir_count="1"
+file_count="1"
+random="$RANDOM"
 
-dircount="1"
-filecount="1"
+TIMER_START=$(date +%s)
 
-while [ $dircount -le $numdirs ]
-do /bin/mkdir -p $tgtdir/directory-$dircount
-numfiles=$(( RANDOM% ($maxfiles - $minfiles) + $minfiles ))
-for (( c=1; c<=$numfiles; c++ ))
-do /bin/dd if=/dev/$comp of=$tgtdir/directory-$dircount/file-$filecount bs=$setblksize count=`echo $(( $smallfile+(RANDOM )%($largefile-$smallfile+1) *1024 ))` >> $ddoutput 2>&1 &
-(( filecount ++ ))
-done
-(( dircount ++ ))
+while [[ ${dir_count} -le ${num_dirs} ]]
+do 
+    /bin/mkdir -p ${tgtdir}/${random}-directory-${dir_count}
+    num_files=$(/usr/bin/shuf -i ${min_file_count}-${max_file_count} -n 1)
+    echo -e "${tgtdir}/${random}-directory-${dir_count} will be populated with ${num_files} (files of varying sizes)."
+
+    for (( c=1; c<=${num_files}; c++ ))
+    do 
+        if (( $(ps -C dd --noheader | wc -l) > "100" ))
+        then
+            sleep 30
+        fi
+
+        size=$(( $(/usr/bin/shuf -i ${small_file_size}-${large_file_size} -n 1) / 64 ))
+        /bin/dd if=/dev/${compressability} of=${tgtdir}/${random}-directory-${dir_count}/file-${file_count} bs=${block_size} count=${size} >> /dev/null 2>&1 &
+        (( file_count ++ ))
+    done
+
+    echo -e "Finished.\v"
+
+(( dir_count ++ ))
 done 
 
-## Upon completion, dd PIDs will be spawned but processes may well still be running
-## Allow time for the data to be completely written
+wait
 
-/bin/echo "
-And we're done creating!
-------------------------
+TIMER_END=$(date +%s)
+TIMER_DIFF_SECONDS=$(( ${TIMER_END} - ${TIMER_START} ))
+TIMER_READABLE=$(date +%H:%M:%S -ud @${TIMER_DIFF_SECONDS})
+echo
+echo -e "Date:\t\t\t\t`date "+%a %d %b %Y"`\nFile creation wall time:\t\t${TIMER_READABLE}\n"
 
-"
-
-
-read -p "The directories and files have been created. Hit enter once the commands have finished for the most accurate log reports.
-
-Otherwise, hit enter to get back to a prompt but note the log reports may be inaccurate."
-
-/bin/echo "
-"
-
-## Logging statistics following the creation phase:
-
-/bin/echo "
-After we have created our stuff:
-
-`/bin/df -h`
-
-And let's look at the listings:
-
-`/usr/bin/du -h --max-depth=1 $tgtdir`
-
-And a bit more detail:
-
-`/bin/ls -l -h $tgtdir/dir*`
-
-#########################################################################
-#                                                                       #
-#                               END                                     #
-#                  `/bin/date`                     #
-#                         		                                #
-#                                                                       #
-#########################################################################
-" >> $ourlog
-
+/bin/echo -e "\vJob complete."
