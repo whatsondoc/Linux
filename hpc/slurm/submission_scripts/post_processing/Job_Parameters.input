@@ -1,0 +1,39 @@
+#======================#
+#    Job Parameters    #
+#======================#
+
+# The name for this particular job - will be used in naming conventions throughout the job and its affiliates:
+    JOB_NAME:                       
+
+# Path to file list with segments for processing. For example: /home/shared/file_list_input.txt
+	FILE_LIST: 			
+
+# Where the container will be downloaded to (consider a network filesystem location so all nodes have access to it at a decent speed). For example: /nfs/shared/containers/
+	CONTAINER_PATH:			
+
+# Username to login to Docker repo. For example: first.last@company.com
+	DOCKER_REPO_USERNAME:		
+
+# Additional details of the container image being downloaded:
+	DOCKER_REPO_ADDRESS:		docker-repo.company.com							<<--- It's unlikely you will need to change the server address
+	DOCKER_REPO_PORT:			1234											<<--- It's unlikely you will need to change this port number
+
+	DOCKER_REPO_OBJECT_PATH:													<<--- For example: "team_name-tools/team_name_compiled"
+	DOCKER_REPO_OBJECT_NAME:													<<--- For example: "container_pp_main"
+	DOCKER_REPO_OBJECT_REV:		latest											<<--- For example: "latest"
+
+# Should we skip the pull of the container image? Enter YES as the value below if so:
+	SKIP_CONTAINER_PULL:		NO
+
+# Do we want to set a limit to the number of parallel executions? Set the variable by using a '%' symbol and an appropriate number. For example: %100
+	CONCURRENT_JOBS:		
+
+# File paths for the Executor.sh and Cleanup.sh scripts. The default assumes the files are in the same working directory, but can be amended if necessary:
+	EXECUTOR_PATH:			Executor.sh
+    CLEANUP_PATH:			Cleanup.sh
+
+# Please set the following variable to YES to confirm the contents of this section have been appropriately set. For example: 
+	ALL_VARS_SET:			NO
+
+#=================================
+# Thank you, and happy processing!

@@ -1,0 +1,82 @@
+evaluate_numa() {
+    
+## This function must be run on a 1 or 2 socket system using English as the language, as key words are extracted from command outputs
+## Call this function and use the ${BIND_PROCESS} variable before your script/application. For example: $ srun ${BIND_PROCESS} /path/to/script.sh --argument=1 --argument=2
+
+## Specify NUMA or CORE to specify whether the function should bind to a NUMA domain or a specific CPU core:
+BIND_GRANULARITY="CORE"
+
+if [[ ${BIND_GRANULARITY} == "CORE" ]]
+then
+        ## Capturing the number of CPU cores that exist on the executing node:
+        export SYSTEM_ALL_CORES=$(nproc --all)
+        MOD_VALUE=${SYSTEM_ALL_CORES}
+
+elif [[ ${BIND_GRANULARITY} == "NUMA" ]]
+then
+        ## Capturing the number of NUMA domains that exist on the executing node:
+        export NUMA_DOMAINS=$(lscpu | grep -w "NUMA node" | awk '{print $NF}')
+        MOD_VALUE=${NUMA_BIND}
+
+else
+        ## Checking to ensure the value above is correctly specified, as the rest of the function depends on it:
+        echo -e "Incorrect bind granularity specified - does not match CORE or NUMA. This is what was specified: ${BIND_GRANULARITY}"
+        exit 1
+
+fi
+
+## Identifying if the job running is part of a Job Array and applying the ${MOD_VALUE}:
+if [[ -n ${SLURM_ARRAY_TASK_ID} ]]
+then    TASK=${SLURM_ARRAY_TASK_ID}
+else    TASK=${SLURM_PROCID}
+fi
+
+## Performing a quick modulo on the unique TASK identifier to produce an integer on which compute area to pin the process (irrespective of whether it's CORE or NUMA):
+COMPUTE_BIND=$(( ${TASK} % ${MOD_VALUE} ))
+## Performing a quick modulo on the unique TASK identifier to produce an integer on which memory area to pin the process (irrespective of whether it's CORE or NUMA):
+MEMORY_BIND=$(( ${TASK} % 2 ))
+
+## Checking whether we already have pinned processes to a particular CPU:
+PINNED_CPUS=( $(env | awk '$1 ~ /BIND_CORE_USED/' | cut -f2 -d "=" | sort -n) )
+for CHECK_USAGE in ${PINNED_CPUS[*]}
+do
+        if [[ ${COMPUTE_BIND} == ${CHECK_USAGE} ]]
+        then    ((COMPUTE_BIND++))
+                if [[ ${COMPUTE_BIND} -gt ${SYSTEM_ALL_CORES} ]]
+                then COMPUTE_BIND="0"
+                fi
+        fi
+done
+
+#echo "This job element will look to bind to ${BIND_GRANULARITY} resources, using ${COMPUTE_BIND} for CPU and ${MEMORY_BIND} for memory."
+
+#echo "Checking to see whether hyperthreading is enabled on this machine:"
+        
+        ## Conditional statement to check the number of threads set for each core:
+        #if [[ $(lscpu | awk '/Thread/ {print $NF}') > "1" ]]
+        #then
+                #echo "==>> Hyperthreading appears to be enabled on this node - steps will be taken to avoid using hyperthreaded cores..."
+                
+                ## Identifying the unique CPU cores, removing any sibling listings: 
+                #SYSTEM_PHYSICAL_CORES=$(cat /sys/devices/system/cpu/cpu*/topology/thread_siblings_list | sort | uniq | cut -f1 -d ',' | sort -n | paste -s -d, -)
+                #DOMAIN_PHYSICAL_CORES=$(cat /sys/devices/system/cpu/cpu*/node${BIND}/cpulist | head -n1)
+                # << Evaluate the physical core needed.
+
+                #echo "Non-hyperthreaded core range for NUMA domain ${NODE_DOMAIN} is: ${DOMAIN_PHYSICAL_CORES}"
+
+                ## Building the execution command for a hyperthreaded scenario:
+                #export BUILD_AFFINITY="numactl --physcpubind=${DOMAIN_PHYSICAL_CORES} --preferred=${MEMORY_BIND}"
+        
+        #else
+                #echo "==>> Hyperthreading appears to be disabled on this node."
+                
+                ## Building the execution command for a non-hyperthreaded scenario:
+                if [[ ${BIND_GRANULARITY} == "CORE" ]]
+                then    export BUILD_AFFINITY="numactl --physcpubind=${COMPUTE_BIND} --preferred ${MEMORY_BIND}"; export BIND_CORE_USED_${COMPUTE_BIND}=${COMPUTE_BIND}
+                else    export BUILD_AFFINITY="numactl --cpunodebind=${COMPUTE_BIND} --preferred=${MEMORY_BIND}"
+                fi
+        #fi
+
+export BIND_PROCESS=${BUILD_AFFINITY}
+
+}
