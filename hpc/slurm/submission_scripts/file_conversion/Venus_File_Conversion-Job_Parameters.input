@@ -1,0 +1,40 @@
+
+#======================#|#======================#
+#     TEAM  <NAME>     #|#    Job Parameters    #
+#======================#|#======================#
+
+# Path to the file list with input files for processing:
+    	INPUT_FILE_ID_LIST:             /path/to/input/file/list.txt
+
+# Path to the file list with output paths for processed input files:
+        OUTPUT_PATH_LIST:               /path/to/output/file/list.txt
+
+# Specify whether to include a database update by declaring '-db' on this line (leaving blank will not trigger an update the database following the executions):
+        UPDATE_DATABASE:                
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# The name for this particular job - will be used in naming conventions throughout the job and its affiliates:
+        JOB_NAME:                       
+
+# The path to the output file (including file name, with Slurm-relevant expressions), for logging both stdout and stderr.
+# If you change the filename (as opposed to the path), there may be an incorrect reading from the file in the Alpha_File_Conversion-Executor.sh file to determine task success:
+        JOB_OUTPUT:                     /path/to/job.output
+
+# Key term to search for when determining success:
+        KEY_TERM:                       
+
+# The number of input files that will be processed within a loop, i.e. if there are 1000 input files to process, a section size of '25' will create a Job Array with 40 elements (40 * 25 = 1000):
+        SECTION_SIZE:                   
+
+# Path to the specific Python Virtual Environment (venv) to use for processing:
+        PYTHON_VENV_PATH:               /path/to/python/env
+
+# Path to the working directory:
+        WORKING_PATH:                   /path/to/working/dir
+
+# Path to the conversion script that will be executed:
+        CONVERSION_SCRIPT:              /path/to/python/script.py
+
+# Path to the Executor.sh script (or alternate name) that will be executed on the compute nodes:
+        EXECUTOR_PATH:                  /path/to/Alpha-File_Conversion-Executor.sh
