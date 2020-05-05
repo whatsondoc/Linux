@@ -26,7 +26,7 @@ do
                 exit 0
                     ;;
         /? )    info "Invalid arguments passed to the script: ${opt}"
-		exit 1
+		        exit 1
                     ;;
     esac
 done
