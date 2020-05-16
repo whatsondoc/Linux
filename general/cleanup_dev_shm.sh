@@ -23,7 +23,7 @@ function delete_contents() {
 #-----------------------------------------------------------------------------------------
 
 echo
-	setup_env
+	setup_env           2> /dev/null
 echo
-	delete_contents
+	delete_contents     2> /dev/null
 echo
