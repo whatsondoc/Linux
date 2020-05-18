@@ -10,7 +10,7 @@ function help_statement() {
 	echo "Execute the script with '--all' to run cleanup on all nodes in all partitions. Optionally, specify a partition as an argument on which to specifically run the cleanup script on."
     echo
 	echo "	An example:   ${0} --all"
-    echo "	An example:   ${0} defq"
+    echo "	An example:   ${0} default"
 	echo
 }
 
