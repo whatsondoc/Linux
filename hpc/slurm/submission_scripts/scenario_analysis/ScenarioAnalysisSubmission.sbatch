@@ -32,7 +32,7 @@ info
 info "Setting paths & variables..."
     # Specify: The directory path for the Matlab runtime that will be used with this execution // The directory path for the Matlab Component Runtime cache
 	export MATLAB_RUNTIME_PATH="/path/to/matlab/runtime"                           
-	export MCR_CACHE_ROOT=/dev/shm/${SLURM_JOB_NAME}_${SLURM_ARRAY_TASK_ID}
+	export MCR_CACHE_ROOT=/dev/shm/${SLURM_JOB_NAME}
 
     # Specify: The file path of the executable to invoke as part of this script // The directory path where the output data shall be written
 	export TEAM_EXECUTABLE=""
