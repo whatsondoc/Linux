@@ -2,6 +2,13 @@
 
 # Parallel find array submission
 # To be submitted as part of a job array from 'parallel_find_launcher.sh'
+# Edit the <PATTERN_n> strings to set the desired match criteria (or edit the syntax as necessary)
+
+# If launching independently from 'parallel_find_launcher.sh', set & uncomment the following variables:
+#PFCS_ROOT_PATH="/path/to/root/dir"
+#PFCS_PATH_DEPTH="4"
+
+#------------------------------------------------------------------------
 
 PFCS_PARALLEL_DIRS=( $(find ${PFCS_ROOT_PATH} -maxdepth ${PFCS_PATH_DEPTH} -mindepth ${PFCS_PATH_DEPTH} -type d -not -path "*.Trash*" 2> /dev/null) )
 
