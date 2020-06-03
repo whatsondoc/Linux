@@ -20,7 +20,7 @@ CS_NAMES_STAT_NUMBERS="${PFCS_PREFIX}calculate_size_perm_stat_numbers.txt"
 
 CS_INPUT_LIST=${1}
 
-function cs_validation() {
+cs_validation() {
 	if 	[[ ! -f ${1} ]]
 	then	
 		echo "No file list provided - exiting..." 
@@ -40,11 +40,11 @@ function cs_validation() {
 	fi
 }
 
-function cs_split_file_list() {
+cs_split_file_list() {
 	split --number=l/${CS_ALL_PROCS} -d ${CS_INPUT_LIST} ${CS_OUTPUT_PATH}/${CS_NAMES_TEMP_FILE_LIST}
 }
 
-function cs_cycle_files() {
+cs_cycle_files() {
 	CS_STATE=0
     CS_INDEX=0
     CS_COUNTER=0
@@ -66,7 +66,7 @@ function cs_cycle_files() {
 	echo "${1}:  ${CS_TOTAL_GB}" >> ${CS_OUTPUT_PATH}/${CS_NAMES_STAT_NUMBERS}
 }
 
-function cs_evaluate_output() {
+cs_evaluate_output() {
 	EO_TOTAL_FILES=$(cat ${CS_INPUT_LIST} | wc -l)
     EO_TOTAL_GB="0"
 
@@ -83,7 +83,7 @@ function cs_evaluate_output() {
     echo "Total number of files    : ${EO_TOTAL_FILES}"
 }
 
-function cs_cleanup() {
+cs_cleanup() {
     if [[ $(find ${CS_OUTPUT_PATH} -mindepth 1 -maxdepth 1 -type f -name "${CS_NAMES_TEMP_FILE_LIST}*") ]]
 	then
         rm ${CS_OUTPUT_PATH}/${CS_NAMES_TEMP_FILE_LIST}*
