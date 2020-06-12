@@ -1,4 +1,5 @@
 #!/bin/bash
+#SBATCH --exclusive
 
 # CS = Calculate Size
 # EO = Evaluate Output

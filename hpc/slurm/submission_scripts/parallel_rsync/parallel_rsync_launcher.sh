@@ -5,13 +5,16 @@
 
 
 #============================================================================================================================================================================================================================================================================================================================================================#
-# VARIABLES
+# USER-LEVEL VARIABLES
 
 export PRDT_TARGET_ROOT_DIR="/path/to/target_root"                                                                      # In other words: where is the data going to be written to?
 export PRDT_OUTPUT_DIR="/path/to/directory/to/store/temporary/file_lists"                                               # Should be in a shared filesystem location, as Slurm tasks will need to read these file lists
 PRDT_RSYNC_EXECUTOR="/path/to/rsync/executor.sh"                                                                        # The path to the rsync execution script, which will run on each Slurm task
 PRDT_CHECKSUM_AGGREGATOR="/path/to/checksum/aggregator.sh"                                                              # The path to the rsync aggregation script, which will run after the job array completes to aggregate checksums
 PRDT_RANGE="50"                                                                                                         # Declaring the width of the parallelisation, i.e. how many separate processes will be spawned for data transfer, e.g. 100 will create a job array with indices of 0-99
+
+#------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
+# FRAMEWORK-LEVEL VARIABLES
 
 export PRDT_SOURCE_ROOT_DIR="/"                                                                                         # It's unlikely this will need to change, but if the input file list is not the fully qualified path you should prefix the root directory here
 export PRDT_UUID="${RANDOM}_"                                                                                           # A unique number to differentiate the various runs
@@ -124,12 +127,15 @@ prdt_submit_sbatch() {
 
     if [[ ${PRDT_LARGE_ARRAY_SUPPORT} == "ENFORCING" ]]
     then
+        echo "INFO      : Staggered release of job array elements"
+        # Removing the % symbol:
+        PRDT_ARRAY_THROTTLE="${PRDT_ARRAY_THROTTLE:1}"
         # Releasing the array throttle gradually:
         while [[ ${PRDT_ARRAY_THROTTLE} -lt ${PRDT_RANGE} ]]
         do
             PRDT_ARRAY_THROTTLE=$(( ${PRDT_ARRAY_THROTTLE} + ${PRDT_ARRAY_THROTTLE_INCREMENT} ))
             scontrol update jobid=${PRDT_PARALLEL_RSYNC_JOB_ID} arraytaskthrottle=${PRDT_ARRAY_THROTTLE}
-            echo "INFO      : Released another batch of ${PRDT_ARRAY_THROTTLE} jobs for ${PRDT_PARALLEL_RSYNC_JOB_ID}"
+            echo "INFO      : Released another batch of jobs - new throttle for array job ID ${PRDT_PARALLEL_RSYNC_JOB_ID} is --->  ${PRDT_ARRAY_THROTTLE}"
             sleep 15
         done
     fi

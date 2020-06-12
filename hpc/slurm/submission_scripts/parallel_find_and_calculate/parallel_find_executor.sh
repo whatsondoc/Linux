@@ -7,10 +7,13 @@
 # If launching independently from 'parallel_find_launcher.sh', set & uncomment the following variables:
 #PFCS_ROOT_PATH="/path/to/root/dir"
 #PFCS_PATH_DEPTH="4"
+#PFCS_SEARCH_STRING_INCLUDE=" -name "*<PATTERN_1>*" -or -iname "*<PATTERN_2>*" -and -iname "*<PATTERN_3>*" "
+#PFCS_SEARCH_STRING_EXCLUDE=" -not -name "*<PATTERN_4>*" "                                                            # Note that there must be a 'NOT' statement included, as the find command relies on this and cannot handle empty parenthesis
 PFCS_NUMA_DOMAINS=2
 PFCS_NODE_CORES=32
 
-#------------------------------------------------------------------------
+#==================================================================================================================================================================================#
+# FUNCTIONS
 
 pfcs_top_level_directory_find() {
     numactl --physcpubind=$(( ${SLURM_JOB_ID} % ${PFCS_NODE_CORES} )) --membind=$(( ${SLURM_JOB_ID} % ${PFCS_NUMA_DOMAINS} )) \
