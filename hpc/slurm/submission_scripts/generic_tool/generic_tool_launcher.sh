@@ -11,20 +11,22 @@
     #   2) Please specify the exact syntax required for the tool to operate in the gtl_execution() function
 
     # Tool Syntax:
-    #   ${GTL_TOOL} \
-    #       --input             ${GTL_INPUT} \
-    #       --output            ${GTL_OUTPUT}
-    #       --output-log        ${GTL_OUTPUT_LOG} \
-    #       --custom-port       12345
-    #       --custom-flag       update_database
+    #   numactl --cpunodebind=${GTL_NUMA_NODE} --membind=${GTL_NUMA_NODE} \
+    #       ${GTL_TOOL} \
+    #           --input             ${GTL_INPUT} \
+    #           --output            ${GTL_OUTPUT}
+    #           --output-log        ${GTL_OUTPUT_LOG} \
+    #           --custom-port       12345
+    #           --custom-flag       update_database
 
     # Sample command:
-    #   ${GTL_TOOL} \
-    #       --input             /path/to/input/file.dat \
-    #       --output            /path/to/output/processed_file.dat \
-    #       --output-log        /path/to/log/directory/file_output.log \
-    #       --custom-port       12345 \
-    #       --custom-flag       update_database
+    #   numactl --cpunodebind=${GTL_NUMA_NODE} --membind=${GTL_NUMA_NODE} \
+    #       ${GTL_TOOL} \
+    #           --input             /path/to/input/file.dat \
+    #           --output            /path/to/output/processed_file.dat \
+    #           --output-log        /path/to/log/directory/file_output.log \
+    #           --custom-port       12345 \
+    #           --custom-flag       update_database
 
 #------------------------------------------------------------------------------------------------------------------------------------------------------#
 # MAIN FUNCTIONS
@@ -39,9 +41,9 @@ error() {
         echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[ERROR]  ${1}"
 }
 
-vpe_help_statement() {
-    help "Operation     --> Printing the help menu"
-    help "Overview      --> A wrapper script to support the massively parallel execution of _TOOL_"
+gtl_help_statement() {
+    help "Operation         --> Printing the help menu"
+    help "Overview          --> A wrapper script to support the massively parallel execution of _TOOL_"
     help
     help "Usage: ${0} [-l | -e] [-f /path/to/file/list.txt] [-v] [-h]"
     help "  -l     Sets the script mode to launch execution jobs via Slurm                              : Mandatory argument 1/2  --  mutually exclusive with '-e' flag"
@@ -56,10 +58,10 @@ vpe_help_statement() {
     echo
 }
 
-vpe_validation() {
+gtl_validation() {
     info "Running validation:"
     if      (( ${OPTIND} == 1 ))
-    then    vpe_help_statement
+    then    gtl_help_statement
             exit 1
     fi
 
@@ -79,9 +81,7 @@ vpe_validation() {
     info
 }
 
-vpe_launcher_set_variables() {
-    info "Setting launcher variables:"
-
+gtl_launcher_set_variables() {
     export GTL_TOOL="/full/path/to/location/to/invoke_tool.bin"
 
     export GTL_UUID="$(date +%Y%m%d_%H%M%S)_${RANDOM}"
@@ -100,12 +100,16 @@ vpe_launcher_set_variables() {
 
     export GTL_TEMP_LOG_DIR="/dev/shm"
 
+    info "Tool path         --> ${GTL_TOOL}"
+    info "Output path       --> ${GTL_WORKING_DIR}"
+    info "UUID              --> ${GTL_UUID}"
+    info
+    info "Setting launcher variables:"
     info "Complete"
-
     info
 }
 
-vpe_create_log_dirs() {
+gtl_create_log_dirs() {
     if      [[ ! -d ${GTL_WORKING_DIR} ]] 
     then    info "Creating job working directory:"
             mkdir -p ${GTL_WORKING_DIR}
@@ -149,7 +153,7 @@ vpe_create_log_dirs() {
     info
 }
 
-vpe_split_file_list() {    
+gtl_split_file_list() {    
     info "Initiating split of input file list:"
     split --number=l/${GTL_RANGE} --numeric=1 -d --suffix-length=6 ${GTL_FILE_LIST} ${GTL_SFL_PREFIX}
             if      [[ ${?} == "0" ]]
@@ -163,7 +167,7 @@ vpe_split_file_list() {
     info
 }
 
-vpe_slurm_submit() {    
+gtl_slurm_submit() {    
     info "Submitting job array to Slurm:"
 
     #GTL_RANGE_THROTTLE="%1000"
@@ -182,11 +186,14 @@ vpe_slurm_submit() {
     info
 }
 
-vpe_execution() {
+gtl_execution() {
     GTL_FILE_LIST_SEGMENT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" ${GTL_FILE_LIST})
     GTL_TEMP_LOG="${GTL_TEMP_LOG_DIR}/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 
-    info "File list     --> ${GTL_FILE_LIST_SEGMENT}"
+    GTL_NUMA_DOMAINS="2"
+    GTL_NUMA_NODE=$(( ${SLURM_ARRAY_TASK_ID} % ${GTL_NUMA_DOMAINS} ))
+
+    info "File list         --> ${GTL_FILE_LIST_SEGMENT}"
     info
     info "Executing processing:"
 
@@ -199,20 +206,21 @@ vpe_execution() {
             GTL_OUTPUT="$(dirname ${GTL_INPUT_FILE})/$(basename ${GTL_INPUT_FILE} | cut -f1 -d '.')_OUTPUT.dat"
             GTL_OUTPUT_LOG="${GTL_TEMP_LOG}/$(basename ${GTL_INPUT_FILE} | cut -f1 -d '.').log"
 
-            ${GTL_TOOL} \
-                --input         ${GTL_INPUT_FILE} \
-                --output        ${GTL_OUTPUT} \
-                --output-log    ${GTL_OUTPUT_LOG} \
-                --custom-port   12345 \
-                --custom-flag   update_database
+            numactl --cpunodebind=${GTL_NUMA_NODE} --membind=${GTL_NUMA_NODE} \
+                ${GTL_TOOL} \
+                    --input         ${GTL_INPUT_FILE} \
+                    --output        ${GTL_OUTPUT} \
+                    --output-log    ${GTL_OUTPUT_LOG} \
+                    --custom-port   12345 \
+                    --custom-flag   update_database
             
             if      [[ ${?} == "0" ]]
-            then    info "Processing successfully completed    : ${GTL_INPUT_FILE}"
-            else    error "*** Processing failed                : ${GTL_INPUT_FILE}"
+            then    info "Processing successfully completed     : ${GTL_INPUT_FILE}"
+            else    error "*** Processing failed                 : ${GTL_INPUT_FILE}"
             fi
         done
         info
-        info "All segments processed from file list: ${GTL_FILE_LIST_SEGMENT}"
+        info "All segments processed from file list : ${GTL_FILE_LIST_SEGMENT}"
         info
         info "Moving log files from scratch to persistent storage:"
         mv ${GTL_TEMP_LOG}/* ${GTL_WORKING_DIR_LOG}
@@ -271,32 +279,31 @@ do  case ${OPTION} in
         v )     export GTL_VERBOSE="TRUE"
                 set -x
                     ;;
-        h )     vpe_help_statement
+        h )     gtl_help_statement
                 exit 0
                     ;;
         * )     error "Invalid arguments passed to the script: -${OPTARG}"
                 error "Exiting ..."
-                vpe_help_statement
+                gtl_help_statement
                 exit 1
                     ;;
     esac
 done
 shift $((OPTIND-1))
 
-vpe_validation
+gtl_validation
 
-info "Operation     --> Run a generic tool against an input dataset"
-info "Script mode   --> ${GTL_MODE}"
-info
+info "Operation         --> Run a generic tool against an input dataset"
+info "Script mode       --> ${GTL_MODE}"
 
 if      [[ ${GTL_MODE} == "Launcher" ]]
-then    info "File list     --> ${GTL_FILE_LIST}"
-        vpe_launcher_set_variables
-        vpe_create_log_dirs
-        vpe_split_file_list
-        vpe_slurm_submit
+then    info "File list         --> ${GTL_FILE_LIST}"
+        gtl_launcher_set_variables
+        gtl_create_log_dirs
+        gtl_split_file_list
+        gtl_slurm_submit
 elif    [[ ${GTL_MODE} == "Executor" ]]
-then    vpe_execution
+then    gtl_execution
 fi
 
 if [[ ${GTL_VERBOSE} == "TRUE" || ${GTL_MODE} == "Executor" ]]
