@@ -44,11 +44,11 @@ vpe_help_statement() {
     help "Overview      --> A wrapper script to support the massively parallel execution of _TOOL_"
     help
     help "Usage: ${0} [-l | -e] [-f /path/to/file/list.txt] [-v] [-h]"
-    help "  -l     Sets the script mode to launch execution jobs via Slurm                              (mandatory argument 1/2  --  mutually exclusive with '-e' flag)"
-    help "  -e     Sets the script mode to execute tool processing                                      (mandatory argument 1/2  --  mutually exclusive with '-l' flag)"
-    help "  -f     Requires the path (absolute or relative) to the input file list or file list map     (mandatory argument 2/2)"
-    help "  -v     Enables verbose mode                                                                 (optional argument)"
-    help "  -h     Show this help message                                                               (optional argument)"
+    help "  -l     Sets the script mode to launch execution jobs via Slurm                              : Mandatory argument 1/2  --  mutually exclusive with '-e' flag"
+    help "  -e     Sets the script mode to execute tool processing                                      : Mandatory argument 1/2  --  mutually exclusive with '-l' flag"
+    help "  -f     Requires the path (absolute or relative) to the input file list or file list map     : Mandatory argument 2/2"
+    help "  -v     Enables verbose mode                                                                 : Optional argument"
+    help "  -h     Show this help message                                                               : Optional argument"
     help
     help "Example commands:"
     help "  ${0} -l -f /path/to/file/list.txt       --> Runs the script in 'Launcher' mode, specifying the full file list at the absolute path : /path/to/file/list.txt"
@@ -97,6 +97,8 @@ vpe_launcher_set_variables() {
 
     export GTL_SLURM_OUTPUT="${GTL_WORKING_DIR_SLURM}/%x-%A_%a.out"
     export GTL_SLURM_ERROR="${GTL_WORKING_DIR_SLURM}/%x-%A_%a.out"
+
+    export GTL_TEMP_LOG_DIR="/dev/shm"
 
     info "Complete"
 
@@ -181,11 +183,12 @@ vpe_slurm_submit() {
 }
 
 vpe_execution() {
-    sleep 10
-    info "Executing processing:"
-
     GTL_FILE_LIST_SEGMENT=$(sed -n "${SLURM_ARRAY_TASK_ID}p" ${GTL_FILE_LIST})
-    GTL_TEMP_LOG="/dev/shm/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+    GTL_TEMP_LOG="${GTL_TEMP_LOG_DIR}/${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
+
+    info "File list     --> ${GTL_FILE_LIST_SEGMENT}"
+    info
+    info "Executing processing:"
 
     if [[ -f ${GTL_FILE_LIST_SEGMENT} ]]
     then
@@ -293,8 +296,7 @@ then    info "File list     --> ${GTL_FILE_LIST}"
         vpe_split_file_list
         vpe_slurm_submit
 elif    [[ ${GTL_MODE} == "Executor" ]]
-then    info "File list     --> ${GTL_FILE_LIST_SEGMENT}"
-        vpe_execution
+then    vpe_execution
 fi
 
 if [[ ${GTL_VERBOSE} == "TRUE" || ${GTL_MODE} == "Executor" ]]
