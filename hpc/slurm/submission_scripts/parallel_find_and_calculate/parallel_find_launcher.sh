@@ -32,7 +32,7 @@ export PFCS_WORKING_LOG="${PFCS_OUTPUT_DIR}/${PFCS_UUID}stdout_output.log"
 # FUNCTIONS
 
 pfcs_slurm_submit() {
-    PFCS_PAR_FIND_TOP_SUBMIT=$(sbatch --job-name=${PFCS_UUID}parallel_find_unit_top --output=${PFCS_OUTPUT_DIR}/%x-%A_%a.out ${PFCS_PAR_FIND_SCRIPT} TOP)
+    PFCS_PAR_FIND_TOP_SUBMIT=$(sbatch --job-name=${PFCS_UUID}parallel_find_unit_top --output=${PFCS_OUTPUT_DIR}/%x.out ${PFCS_PAR_FIND_SCRIPT} TOP)
     PFCS_PAR_FIND_TOP_JOB_ID=$( echo ${PFCS_PAR_FIND_TOP_SUBMIT} | awk '{print $4}')
 
     echo "Parallel Find - Top     : ${PFCS_PAR_FIND_TOP_SUBMIT}"
@@ -42,7 +42,7 @@ pfcs_slurm_submit() {
         PFCS_ARRAY_JOB_IDS=${PFCS_ARRAY_JOB_IDS}:${PFCS_TOP_JOB_ID}
     done
 
-    PFCS_PAR_FIND_LOW_SUBMIT=$(sbatch --array=0-$(( ${PFCS_NUM_DIRS} - 1 )) --job-name=${PFCS_UUID}parallel_find_unit_low --output=${PFCS_OUTPUT_DIR}/%x-%A_%a.out ${PFCS_PAR_FIND_SCRIPT} LOW)
+    PFCS_PAR_FIND_LOW_SUBMIT=$(sbatch --array=0-$(( ${PFCS_NUM_DIRS} - 1 )) --job-name=${PFCS_UUID}parallel_find_unit_low --output=${PFCS_OUTPUT_DIR}/%x-%a.out ${PFCS_PAR_FIND_SCRIPT} LOW)
     PFCS_PAR_FIND_LOW_JOB_ID=$( echo ${PFCS_PAR_FIND_LOW_SUBMIT} | awk '{print $4}')
 
     echo "Parallel Find - Low     : ${PFCS_PAR_FIND_LOW_SUBMIT}"
@@ -52,7 +52,7 @@ pfcs_slurm_submit() {
         PFCS_ARRAY_JOB_IDS=${PFCS_ARRAY_JOB_IDS}:${PFCS_LOW_JOB_ID}
     done
 
-    PFCS_AGGREGATOR_SUBMIT=$(sbatch --dependency=afterany${PFCS_ARRAY_JOB_IDS} --job-name=${PFCS_UUID}parallel_find_aggregation --output=${PFCS_OUTPUT_DIR}/%x.out ${PFCS_AGGREGATOR_SCRIPT})
+    PFCS_AGGREGATOR_SUBMIT=$(sbatch --dependency=afterany:${PFCS_PAR_FIND_TOP_JOB_ID}:${PFCS_PAR_FIND_LOW_JOB_ID} --job-name=${PFCS_UUID}parallel_find_aggregation --output=${PFCS_OUTPUT_DIR}/%x.out ${PFCS_AGGREGATOR_SCRIPT})
     PFCS_AGGREGATOR_JOB_ID=$( echo ${PFCS_AGGREGATOR_SUBMIT} | awk '{print $4}')
 
     echo "Aggregator              : ${PFCS_AGGREGATOR_SUBMIT}"

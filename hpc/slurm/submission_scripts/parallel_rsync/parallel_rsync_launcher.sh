@@ -69,6 +69,13 @@ prdt_validation() {
     then 
 	    export PRDT_TARGET_ROOT_DIR=$(echo ${PRDT_TARGET_ROOT_DIR} | sed s'/.$//')
     fi
+
+    # Checking Slurm packages exist on the machine:
+    if [[ $(command -v sbatch) && $(command -v scontrol) ]]
+    then
+        echo "*** ERROR:    Slurm commands are not available on this machine"
+        exit
+    fi
     echo
 }
 

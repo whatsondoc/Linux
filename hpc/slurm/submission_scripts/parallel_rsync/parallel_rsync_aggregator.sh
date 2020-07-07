@@ -18,7 +18,8 @@ prdt_aggregate_pre_checksum_lists() {
         cat ${PRDT_PRE_CHECKSUM}
     done >> ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt
 
-    echo "INFO      : Pre-checksum aggregated list ---> $(ls -lh ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt)"
+    echo "INFO      : Number of checksum lists (pre)    ---> ${#PRDT_PRE_CHECKSUM_LIST_ARRAY[*]}"
+    echo "INFO      : Pre-checksum aggregated list      ---> $(ls -lh ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt)"
     echo
 
     for PRDT_DELETE_PRE_CHECKSUM_LIST in ${PRDT_PRE_CHECKSUM_LIST_ARRAY[*]}
@@ -40,7 +41,8 @@ prdt_aggregate_post_checksum_lists() {
         cat ${PRDT_POST_CHECKSUM}
     done >> ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt
 
-    echo "INFO      : Post-checksum aggregated list ---> $(ls -lh ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt)"
+    echo "INFO      : Number of checksum lists (post)   ---> ${#PRDT_POST_CHECKSUM_LIST_ARRAY[*]}"
+    echo "INFO      : Post-checksum aggregated list     ---> $(ls -lh ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt)"
     echo
 
     for PRDT_DELETE_POST_CHECKSUM_LIST in ${PRDT_POST_CHECKSUM_LIST_ARRAY[*]}
@@ -60,12 +62,12 @@ prdt_compare_checksum_lists() {
 
     if [[ ! -s ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt ]]
     then
-        echo "*** WARNING:      This file is empty: ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt"
+        echo "*** WARNING:      This file is empty  ---> ${PRDT_TEMP_CHECKSUM_LIST_NAME}pre_total.txt"
     fi
 
     if [[ ! -s ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt ]]
     then
-        echo "*** WARNING:      This file is empty: ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt"
+        echo "*** WARNING:      This file is empty  ---> ${PRDT_TEMP_CHECKSUM_LIST_NAME}post_total.txt"
     fi
 
     echo
@@ -97,8 +99,6 @@ Start time              	    : $(date)
 Operation               	    : Aggregating checksum calculations (pre & post)
 Slurm Array Job_Task ID		    : ${SLURM_JOB_ID}
 Output directory                : ${PRDT_OUTPUT_DIR}
-Number of checksum lists (pre)	: ${#PRDT_PRE_CHECKSUM_LIST_ARRAY[*]}
-Number of checksum lists (post) : ${#PRDT_POST_CHECKSUM_LIST_ARRAY[*]}
 
 Printing related environment:
 $(env | egrep 'SLURM|PRDT' | sort)

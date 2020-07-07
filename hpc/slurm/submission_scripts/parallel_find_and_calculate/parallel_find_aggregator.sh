@@ -6,6 +6,6 @@
 for APF_FILE in $(find ${PFCS_OUTPUT_DIR} -name "${PFCS_UUID}parallel_find_unit*")
 do 
     cat ${APF_FILE}
-done | sort
+done | sort | uniq
 
 find ${PFCS_OUTPUT_DIR} -name "${PFCS_UUID}parallel_find_unit*" -delete

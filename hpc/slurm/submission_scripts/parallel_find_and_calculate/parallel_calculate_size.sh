@@ -13,6 +13,8 @@ IFS=$'\n'           # Setting the Internal Field Separator (IFS) to new line, so
 if [[ -n ${PFCS_UUID} ]]
 then
     PFCS_PREFIX="${PFCS_UUID}_"
+else
+	PFCS_PREFIX="${RANDOM}_"
 fi
 
 CS_NAMES_TEMP_FILE_LIST="${PFCS_PREFIX}calculate_size_temp_split_file_list-"
