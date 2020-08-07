@@ -27,7 +27,6 @@ cvc_set_local_variables() {
     export CVC_USER="<_USER_>"                                                  # The username that will be used to connect to the remote host (to be used in conjunction with the ssh key pair, as below)
     export CVC_LOGIN_TARGET="<_LOGIN_TARGET_>"                                  # Name (Fully Qualified or otherwise) of the remote host to connect to, and use to perform the tests, e.g. 'login-server.mycompany.com' or 'loginserver'
     export CVC_SSH_KEY_PATH="/path/to/ssh/key_pair"                             # Specifying the path to an ssh key pair on the local host to simplify and make remote connectivity silent
-    export CVC_REMOTE_SCRIPT_PATH="/home/${CVC_USER}/$(basename ${0})"          # The path to which the script will be copied to, and executed from. Should be reachable by compute nodes, too.
 
     export CVC_LOCAL_SLEEP="1"
 }
@@ -41,6 +40,7 @@ cvc_set_remote_variables() {
     export CVC_TEMP_DIR_PATH="/path/to/where/dir/and/file/can_be_written"       # Recommended to specify a path on a shared filesystem, e.g. parallel file system, scratch space, archive store or other (specifying a local path on the remote host limits the effectiveness of the tests)
 
     #---------------------------------------------------------------------------# It should not be necessary to modify the below variables
+    export CVC_REMOTE_SCRIPT_PATH="/home/${CVC_USER}/$(basename ${0})"          # The path to which the script will be copied to, and executed from. Should be reachable by compute nodes, too.
     export CVC_TEMP_FILE_NAME="cvc_temp_file.dat"
     export CVC_REMOTE_SLEEP="1"
     export CVC_PASS_COUNTER="0"                                             
