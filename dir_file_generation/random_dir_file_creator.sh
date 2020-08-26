@@ -32,11 +32,13 @@ ________________________________________________________________________
 dir_count="1"
 file_count="1"
 random="$RANDOM"
+procs=$(( $(nproc) - 1 ))
+proc_count="0"
 
 TIMER_START=$(date +%s)
 
 while [[ ${dir_count} -le ${num_dirs} ]]
-do 
+do
     /bin/mkdir -p ${tgtdir}/${random}-directory-${dir_count}
     num_files=$(/usr/bin/shuf -i ${min_file_count}-${max_file_count} -n 1)
     echo -e "${tgtdir}/${random}-directory-${dir_count} will be populated with ${num_files} (files of varying sizes)."
@@ -47,10 +49,16 @@ do
         then
             sleep 30
         fi
+        
+        if (( ${proc_count} == ${procs} ))
+        then
+            proc_count="0"
+        fi
 
         size=$(( $(/usr/bin/shuf -i ${small_file_size}-${large_file_size} -n 1) / 64 ))
-        /bin/dd if=/dev/${compressability} of=${tgtdir}/${random}-directory-${dir_count}/file-${file_count} bs=${block_size} count=${size} >> /dev/null 2>&1 &
+        taskset -c ${proc_count} /bin/dd if=/dev/${compressability} of=${tgtdir}/${random}-directory-${dir_count}/file-${file_count} bs=${block_size} count=${size} >> /dev/null 2>&1 &
         (( file_count ++ ))
+        (( proc_count ++ ))
     done
 
     echo -e "Finished.\v"
