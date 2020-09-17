@@ -117,7 +117,6 @@ gtl_validation() {
 
 gtl_launcher_set_programmatic_variables() {
         export GTL_UUID="$(date +%Y%m%d_%H%M%S)_${RANDOM}"
-        export GTL_RANGE="4"    # How wide should the jobs be parallelised? Take into account the wall time per individual process.
 
         export GTL_WORKING_DIR_LOG="${GTL_WORKING_DIR}/process_logs"
         export GTL_WORKING_DIR_SFL="${GTL_WORKING_DIR}/splitted_file_lists"
@@ -231,6 +230,7 @@ gtl_execution() {
         if [[ -f ${GTL_FILE_LIST_SEGMENT} ]]
         then
                 mkdir ${GTL_TEMP_LOG}
+                mv ${GTL_FILE_LIST_SEGMENT} ${GTL_TEMP_LOG}
 
                 for GTL_INPUT_FILE in $(cat ${GTL_FILE_LIST_SEGMENT})
                 do      gtl_tool_command
@@ -245,7 +245,7 @@ gtl_execution() {
                 info
                 if      find ${GTL_TEMP_LOG} -mindepth 1 | read
                 then    info "Moving log files from scratch to persistent storage:"
-                        mv ${GTL_TEMP_LOG}/* ${GTL_WORKING_DIR_LOG}
+                        mv ${GTL_TEMP_LOG}/* ${GTL_WORKING_DIR_LOG} 2>/dev/null
                         if      [[ ${?} == "0" ]]
                         then    info "Complete"
                                 info "Cleaning up other remnants ..."
@@ -253,7 +253,7 @@ gtl_execution() {
                                 rm ${GTL_FILE_LIST_SEGMENT}
                         else    error "Unable to move log files"
                         fi
-                else    info "Scratch directory is empty -- will clean up ..."
+                else    info "Scratch directory is empty - will clean up ..."
                         rmdir ${GTL_TEMP_LOG}
                 fi
         else    error "Unable to enumerate file list: ${GTL_FILE_LIST_SEGMENT}"
