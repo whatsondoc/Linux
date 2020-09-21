@@ -110,6 +110,7 @@ gtl_validation() {
                         unset GTL_DEBUG
                         unset GTL_RUN_DEBUG
                 fi
+        fi
         info
 }
 
