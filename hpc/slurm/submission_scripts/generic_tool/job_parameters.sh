@@ -34,7 +34,7 @@
     GTL_OUTPUT="$(dirname ${GTL_INPUT_FILE})/$(basename ${GTL_INPUT_FILE} | cut -f1 -d '.')_OUTPUT.dat"
     GTL_OUTPUT_LOG="${GTL_TEMP_LOG}/$(basename ${GTL_INPUT_FILE} | cut -f1 -d '.').log"
 
-    GTL_TOOL_COMMAND="
+    export GTL_TOOL_COMMAND="
         ${GTL_TOOL}
                 --input         ${GTL_INPUT_FILE}
                 --output        ${GTL_OUTPUT}

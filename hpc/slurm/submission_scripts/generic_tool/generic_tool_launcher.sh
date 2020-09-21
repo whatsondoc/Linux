@@ -276,7 +276,8 @@ gtl_execution() {
                 mv ${GTL_FILE_LIST_SEGMENT} ${GTL_SCRATCH_TASK_LOG_FILE}
 
                 for GTL_INPUT_FILE in $(cat ${GTL_SCRATCH_TASK_LOG_FILE})
-                do      ${GTL_RUN_DEBUG} ${GTL_NUMA_BIND} ${GTL_TOOL_COMMAND}
+                do      source ${GTL_JOB_PARAMETERS}
+                        ${GTL_RUN_DEBUG} ${GTL_NUMA_BIND} ${GTL_TOOL_COMMAND}
 
                         if      [[ ${?} == "0" ]]
                         then    info "Processing successfully completed     : ${GTL_INPUT_FILE}"
