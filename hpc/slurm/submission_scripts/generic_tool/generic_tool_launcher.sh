@@ -14,14 +14,17 @@
 #------------------------------------------------------------------------------------------------------------------------------------------------------------#
 # MAIN FUNCTIONS
 
-help() {
-        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[HELP]   ${1}" 
+help() { 
+        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[HELP]    ${1}" 
 }
-info() {
-        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[INFO]   ${1}" 
+info() { 
+        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[INFO]    ${1}" 
 }
-error() {
-        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[ERROR]  ${1}"
+warning() { 
+        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[WARNING] ${1}" 
+}
+error() { 
+        echo -e "`date "+%Y/%m/%d   %H:%M:%S"`\t[ERROR]   ${1}" 
 }
 
 gtl_help_statement() {
@@ -70,6 +73,12 @@ gtl_validation() {
                         exit 1
                 fi
 
+                if      [[ ! -f ${GTL_TOOL} ]]
+                then    warning "The Launcher cannot find the tool (as a file) at the specified location:  ${GTL_TOOL}"
+                        warning "As the Executor will also check to verify it can reach the specified tool, the Launcher will continue ..."
+                        exit 1
+                fi
+
                 if      [[ ! -f ${GTL_FILE_LIST} ]]
                 then    error "File list can not be enumerated: ${GTL_FILE_LIST}"
                         error "Exiting ..."
@@ -79,6 +88,12 @@ gtl_validation() {
                         exit 1
                 fi
 
+                if      (( ${GTL_RANGE} > $(cat ${GTL_FILE_LIST} | wc -l) ))
+                then    info "The specified parallelisation range of \'${GTL_RANGE}\' is greater than the number of lines in the specified file list: \'$(cat ${GTL_FILE_LIST} | wc -l)\'"
+                        info "The Launcher will reduce the parallelisation range to the length of the file list, and continue to execute ..."
+                        export GTL_RANGE=$(cat ${GTL_FILE_LIST} | wc -l)
+                fi
+
         elif    [[ ${GTL_MODE} == "Executor" ]]
         then    if      [[ ${GTL_NUMA_ENABLED} == "ENABLED" ]]
                 then    if      [[ ! $(command -v numactl)  &&  ! $(command -v lscpu) ]]
@@ -86,6 +101,12 @@ gtl_validation() {
                         error "Exiting ..."
                         exit 1
                         fi
+                fi
+
+                if      [[ ! -f ${GTL_TOOL} ]]
+                then    error "The tool cannot be found (as a file) at the specified location:  ${GTL_TOOL}"
+                        error "Exiting ..."
+                        exit 1
                 fi
 
                 if      [[ ! -f ${GTL_FILE_LIST} ]]
@@ -116,7 +137,7 @@ gtl_validation() {
 
 gtl_launcher_set_programmatic_variables() {
         export GTL_JOB_NAME="run_$(basename ${GTL_TOOL})"
-        export GTL_UUID="$(date +%Y%m%d_%H%M%S)_${RANDOM}"
+        export GTL_UUID="${GTL_JOB_NAME%.*}_D$(date +%Y%m%d)_T$(date +%H%M%S)_R${RANDOM}"
 
         export GTL_WORKING_DIR_BASE="${GTL_WORKING_DIR}/${GTL_UUID}"
         export GTL_WORKING_DIR_BASE_LOG="${GTL_WORKING_DIR_BASE}/process_logs"
@@ -218,13 +239,13 @@ gtl_scheduler_submit() {
                 GTL_SCHEDULER_COMMAND="sbatch
                         --array=1-${GTL_RANGE}${GTL_RANGE_THROTTLE}
                         --job-name=${GTL_JOB_NAME} --output=${GTL_SCHEDULER_OUTPUT} --error=${GTL_SCHEDULER_ERROR}
-                        ${GTL_SCHEDULER_EXTRA_ARGS} ${0} -e -f ${GTL_SFL_MAP}"
+                        ${GTL_SCHEDULER_EXTRA_ARGS} ${0} ${GTL_VERBOSE_FLAG} ${GTL_DEBUG_FLAG} -e -f ${GTL_SFL_MAP}"
 
         elif    [[ ${GTL_SCHEDULER^^} == "PBS" ]]
         then    export GTL_SCHEDULER_OUTPUT="${GTL_WORKING_DIR_BASE_SCHEDULER}/"
                 export GTL_SCHEDULER_ERROR="${GTL_WORKING_DIR_BASE_SCHEDULER}/"
                 
-                GTL_SCHEDULER_COMMAND="echo ${0} -e -f ${GTL_SFL_MAP} | qsub
+                GTL_SCHEDULER_COMMAND="echo ${0} ${GTL_VERBOSE_FLAG} ${GTL_DEBUG_FLAG} -e -f ${GTL_SFL_MAP} | qsub
                         -J 1-${GTL_RANGE}
                         -N ${GTL_JOB_NAME} -j oe -o ${GTL_SCHEDULER_OUTPUT} -e ${GTL_SCHEDULER_ERROR}
                         -V ${GTL_SCHEDULER_EXTRA_ARGS}"
@@ -237,7 +258,7 @@ gtl_scheduler_submit() {
         else    error "${GTL_SCHEDULER_SUBMIT}"
                 error "Failed to successfully submit job array to the scheduler - exiting ..."
                 if      [[ ${GTL_SCHEDULER} == "PBS" ]]
-                then    error "PBS requires full paths to files - consider this when defining the path to files or scripts"
+                then    error "PBS strongly prefers full paths to files - consider this when defining the path to files or scripts"
                 fi
                 exit 1
         fi
@@ -250,7 +271,7 @@ gtl_execution() {
         then    SCHEDULER_ARRAY_JOB_ID="${SLURM_ARRAY_JOB_ID}"
                 SCHEDULER_ARRAY_TASK_ID="${SLURM_ARRAY_TASK_ID}"
         elif    [[ ${GTL_SCHEDULER^^} == "PBS" ]]
-        then    SCHEDULER_ARRAY_JOB_ID=$(echo ${PBS_JOBID} | cut -f1 -d '[')
+        then    SCHEDULER_ARRAY_JOB_ID="${PBS_JOBID%[*}"
                 SCHEDULER_ARRAY_TASK_ID="${PBS_ARRAY_INDEX}"
                 export PBS_NODE_NAME=$(hostname -f)
         fi
@@ -355,10 +376,12 @@ do  case ${OPTION} in
                     ;;
         v )     set -x
                 export GTL_VERBOSE="Verbose"
+                export GTL_VERBOSE_FLAG="-v"
                     ;;
         d )     set -x
                 export GTL_VERBOSE="Verbose"
                 export GTL_DEBUG="Debug"
+                export GTL_DEBUG_FLAG="-d"
                 export GTL_RUN_DEBUG="strace -d -t"
                     ;;
         h )     gtl_help_statement
@@ -375,7 +398,7 @@ shift $((OPTIND-1))
 
 gtl_validation
 
-info "Operation         --> Run a generic tool against an input dataset"
+info "Operation         --> Run $(basename ${GTL_TOOL}) against an input dataset"
 info "Job Parameters    --> ${GTL_JOB_PARAMETERS}"
 info "Script mode       --> ${GTL_MODE}"
 if      [[ -n ${GTL_VERBOSE} || -n ${GTL_DEBUG} ]] 
