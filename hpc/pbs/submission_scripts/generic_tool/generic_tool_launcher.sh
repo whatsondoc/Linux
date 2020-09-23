@@ -83,13 +83,17 @@ gtl_validation() {
                 then    error "File list can not be enumerated: ${GTL_FILE_LIST}"
                         error "Exiting ..."
                         exit 1
+                elif    (( $(cat ${GTL_FILE_LIST} | wc -l) == "0" ))
+                then    error "The file list specified appears to have 0 lines, i.e. an empty file - thus, no work can be done here"
+                        error "Exiting ..."
+                        exit 1
                 elif    [[ -z ${GTL_FILE_LIST} ]]
                 then    error "A path to the input file list has not been provided - exiting ..."
                         exit 1
                 fi
 
                 if      (( ${GTL_RANGE} > $(cat ${GTL_FILE_LIST} | wc -l) ))
-                then    info "The specified parallelisation range of \'${GTL_RANGE}\' is greater than the number of lines in the specified file list: \'$(cat ${GTL_FILE_LIST} | wc -l)\'"
+                then    info "The specified parallelisation range of '${GTL_RANGE}' is greater than the number of lines in the specified file list: '$(cat ${GTL_FILE_LIST} | wc -l)'"
                         info "The Launcher will reduce the parallelisation range to the length of the file list, and continue to execute ..."
                         export GTL_RANGE=$(cat ${GTL_FILE_LIST} | wc -l)
                 fi
@@ -163,7 +167,7 @@ gtl_create_log_dirs() {
         if      [[ ! -d ${GTL_WORKING_DIR} ]] 
         then    info "Creating job working directory:"
                 mkdir -p ${GTL_WORKING_DIR}
-                if      [[ ${?} == "0" ]]
+                if      (( ${?} == "0" ))
                 then    info "Complete"
                 else    error "Unable to create directory - exiting ..."
                         exit 1
@@ -172,7 +176,7 @@ gtl_create_log_dirs() {
 
         info "Creating unique base working directory for the job:"
         mkdir -p ${GTL_WORKING_DIR_BASE}
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "Complete"
         else    error "Unable to create directory - exiting ..."
                 exit 1
@@ -180,7 +184,7 @@ gtl_create_log_dirs() {
 
         info "Creating split file list directory:"
         mkdir -p ${GTL_WORKING_DIR_BASE_SFL}
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "Complete"
         else    error "Unable to create directory - exiting ..."
                 exit 1
@@ -188,7 +192,7 @@ gtl_create_log_dirs() {
 
         info "Creating split file list sub-directory for finished maps:"
         mkdir -p ${GTL_WORKING_DIR_BASE_SFL_FINISHED}
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "Complete"
         else    error "Unable to create directory - exiting ..."
                 exit 1
@@ -196,7 +200,7 @@ gtl_create_log_dirs() {
 
         info "Creating scheduler log directory:"
         mkdir -p ${GTL_WORKING_DIR_BASE_SCHEDULER}
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "Complete"
         else    error "Unable to create directory - exiting ..."
                 exit 1
@@ -204,7 +208,7 @@ gtl_create_log_dirs() {
 
         info "Creating process log directory:"
         mkdir -p ${GTL_WORKING_DIR_BASE_LOG}
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "Complete"
         else    error "Unable to create directory - exiting ..."
                 exit 1
@@ -216,7 +220,7 @@ gtl_create_log_dirs() {
 gtl_split_file_list() {    
         info "Initiating split of input file list:"
         ${GTL_RUN_DEBUG} split --number=l/${GTL_RANGE} --numeric=1 -d --suffix-length=6 ${GTL_FILE_LIST} ${GTL_SFL_PREFIX}
-                if      [[ ${?} == "0" ]]
+                if      (( ${?} == "0" ))
                 then    info "Complete"
                 else    error "Unable to split the input file list - exiting ..."
                         exit 1
@@ -253,7 +257,7 @@ gtl_scheduler_submit() {
 
         GTL_SCHEDULER_SUBMIT=$(eval ${GTL_RUN_DEBUG} ${GTL_SCHEDULER_COMMAND})
 
-        if      [[ ${?} == "0" ]]
+        if      (( ${?} == "0" ))
         then    info "${GTL_SCHEDULER_SUBMIT}"
         else    error "${GTL_SCHEDULER_SUBMIT}"
                 error "Failed to successfully submit job array to the scheduler - exiting ..."
@@ -300,7 +304,7 @@ gtl_execution() {
                 do      source ${GTL_JOB_PARAMETERS}
                         ${GTL_RUN_DEBUG} ${GTL_NUMA_BIND} ${GTL_TOOL_COMMAND}
 
-                        if      [[ ${?} == "0" ]]
+                        if      (( ${?} == "0" ))
                         then    info "Processing successfully completed     : ${GTL_INPUT_FILE}"
                         else    error "*** Processing failed                 : ${GTL_INPUT_FILE}"
                         fi
@@ -312,7 +316,7 @@ gtl_execution() {
                 then    if      [[ -f ${GTL_SCRATCH_TASK_LOG_FILE} ]]
                         then    info "Moving input file map from scratch to persistent storage:"
                                 mv ${GTL_SCRATCH_TASK_LOG_FILE} ${GTL_WORKING_DIR_BASE_SFL_FINISHED} 2>/dev/null
-                                if      [[ ${?} == "0" ]]
+                                if      (( ${?} == "0" ))
                                 then    info "Complete"
                                 else    error "Error moving input file map"
                                 fi
