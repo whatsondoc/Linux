@@ -6,7 +6,7 @@
 
     export GTL_TOOL="/full/path/to/location/to/invoke_tool.bin"             # Path to the tool being used
 
-    export GTL_FILE_LIST="/full/path/to/location/of/input/file_list.txt"    # Path to the file list that  
+    export GTL_FILE_LIST="/full/path/to/location/of/input/file_list.txt"    # Path to the file list that will be used as input
 
     export GTL_WORKING_DIR="/path/to/shared/working/output/directory"       # Where artifacts will be created and stored during the job execution
 

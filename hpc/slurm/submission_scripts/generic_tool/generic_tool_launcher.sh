@@ -76,7 +76,6 @@ gtl_validation() {
                 if      [[ ! -f ${GTL_TOOL} ]]
                 then    warning "The Launcher cannot find the tool (as a file) at the specified location:  ${GTL_TOOL}"
                         warning "As the Executor will also check to verify it can reach the specified tool, the Launcher will continue ..."
-                        exit 1
                 fi
 
                 if      [[ ! -f ${GTL_FILE_LIST} ]]
