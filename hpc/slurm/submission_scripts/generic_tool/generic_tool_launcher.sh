@@ -41,9 +41,9 @@ gtl_help_statement() {
         help "  -h     Show this help message                                                                   : Optional argument"
         help
         help "Example commands:"
-        help "  ${0} -l -p /path/to/file/list.txt       --> Runs the script in 'Launcher' mode, specifying the job parameters file at the absolute path :  /path/to/job_parameters.sh"
+        help "  ${0} -l -p /path/to/job_params.sh       --> Runs the script in 'Launcher' mode, specifying the job parameters file at the absolute path :  /path/to/job_parameters.sh"
         help "  ${0} -e -f dir/with/file/list_map.txt   --> Runs the script in 'Executor' mode, specifying the file list map at the relative path :  dir/with/file/list_map.txt"
-        help "  ${0} -l -p /path/to/file/list.txt -d    --> Runs the script in 'Launcher' mode with debug enabled, specifying the job parameters file at the absolute path :  /path/to/Decode_JobParams.sh"
+        help "  ${0} -l -p /path/to/job_params.sh -d    --> Runs the script in 'Launcher' mode with debug enabled, specifying the job parameters file at the absolute path :  /path/to/Decode_JobParams.sh"
         echo
 }
 

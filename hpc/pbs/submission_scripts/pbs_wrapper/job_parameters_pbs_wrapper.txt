@@ -1,0 +1,40 @@
+#------------------------------------------#
+#  Job Submission Wrapper: Parameter File  #
+#------------------------------------------#
+#
+#'WRAPPER_VALIDATE_JOB_PARAMETERS:CONFIRMED'
+#
+## [ README ]
+#   Associated variables used in the tool execution section are:
+#       ${INPUT}                            <--- The input that will be provided to the tool for execution/processing
+#       ${INPUT//raw/output}		    <--- An example of how to leverage bash variable manipulation, to replace the string 'raw' in the input string with 'output' 
+#       ${WRAPPER_WORKING_DIR_BASE_LOG}     <--- A persistent storage location where tool/process log files can be written
+#       ${WRAPPER_SCRATCH_TASK_DIR}         <--- A scratch storage location where temporary files used for/by each specific task can be stored - will be deleted after the task terminates
+
+## [ FILE_LIST ]
+
+    export WRAPPER_FILE_LIST='/path/to/input/file_list.txt'
+
+## [ TOOL_DETAILS ]
+
+    # How the tool will be invoked:
+    export WRAPPER_TOOL_COMMAND='/path/to/tool.bin
+                --input         ${INPUT}
+                --output        ${INPUT//raw/output}
+                --output-log    ${WRAPPER_WORKING_DIR_BASE_LOG}
+                --temp-path     ${WRAPPER_SCRATCH_TASK_DIR}
+                --custom-port   12345 \
+                --custom-flag   update_database'
+
+    # The single quotes ('...') above determines the start & closure of the WRAPPER_TOOL_COMMAND, and should be left in tact
+    # They are used as it makes splitting a command over several lines easier, without additional escaping required
+    # Single quotes prevent the variables from being evaluated until runtime, which is important for the clean execution of the wrapper
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## [ ANYTHING_ELSE ]
+
+    export WRAPPER_SCHEDULER_EXTRA_ARGS=''              # If particular scheduler flags are needed, e.g. working in a specific directory (to save setting library paths), choosing a specific queue/partition etc.
+
+    #export WRAPPER_ANY_OTHER_NECESSARY_ENV_VAR_A="ABC123"
+    #export WRAPPER_ANY_OTHER_NECESSARY_ENV_VAR_B="DEF456"
+    #export WRAPPER_ANY_OTHER_NECESSARY_ENV_VAR_C="GHI789"
