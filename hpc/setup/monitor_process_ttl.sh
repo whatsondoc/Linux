@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #set -x
-IFS=$'\n'				# Setting the Internal Field Separator (IFS) to new line, so as to accommodate any files with spaces in the filenames
 
 help_statement() {
 	echo
