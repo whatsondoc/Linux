@@ -1,20 +1,28 @@
 #!/bin/bash
 
+info() { echo "${1}" ; }
+verbose() { if [[ ${VERBOSE} == "TRUE" ]]; then echo "${1}"; fi ; }
+
 term_usage() {
 echo "
-Term script usage : $(basename $0) [-p PARTITION_NAME] [-w NODE_NAME] [-t TIME_HOURS] [-h HELP]
+Term script usage : $(basename $0) [-p PARTITION_NAME] [-w NODE_NAME] [-t TIME_HOURS] [-e]
 
-   Example (0)     : $(basename $0)					                << Opens a terminal with all default settings: any available node in the default partition with the default 4 hour time window
-   Example (1)     : $(basename $0) -p firstq				        << Opens a terminal on any node in the firstq partition with the default 4 hour time window
-   Example (2)     : $(basename $0) -p firstq -t 2			        << Opens a terminal on any node in the firstq partition with a 2 hour time window
-   Example (3)     : $(basename $0) -p secondq -w node0001		    << Opens a terminal on node0001 in the secondq partition, with the default 4 hour time window
-   Example (4)     : $(basename $0) -p secondq -w node0001 -t 8	    << Opens a terminal on node0001 in the secondq partition, with an 8 hour time window
+	[ -e ] = Exclusive ownership of node
+	[ -v ] = Enable verbose mode
+	[ -h ] = Print this help menu
+
+   Example (0)     : $(basename $0)					<< Opening a terminal with all default settings: any available node in the default partition and the default 4 hour time window
+   Example (1)     : $(basename $0) -p gpu_queue			<< Opening a terminal on any node in the genericq partition with the default 4 hour time window
+   Example (2)     : $(basename $0) -p gpu_queue -t 2			<< Opening a terminal on any node in the genericq partition with a 2 hour time window
+   Example (3)     : $(basename $0) -p gpu_queue -w node0001		<< Opening a terminal on the srlp01297 node in the genericq partition, with the default 4 hour time window
+   Example (4)     : $(basename $0) -p gpu_queue -w node0001 -t 8	<< Opening a terminal on the srlp01297 node in the genericq partition, with an 8 hour time window
+   Example (5)     : $(basename $0) -p gpu_queue -w node0001 -t 8 -e	<< Opening a terminal on the srlp01297 node in the genericq partition, with an 8 hour time window and exclusive ownership of the node
 " >&2
 }
 
 #---------
 
-while getopts "w:p:t:h" OPTION
+while getopts "w:p:t:evh" OPTION
 do
 case ${OPTION} in
 	w) NODELIST=${OPTARG}
@@ -50,6 +58,12 @@ case ${OPTION} in
 		fi
 		;;
 
+	e) EXCLUSIVE="--exclusive"
+		;;
+
+	v) VERBOSE="TRUE"
+		;;
+
     	h | *) term_usage && exit 1
       		;;
 	esac
@@ -68,17 +82,26 @@ if	[[ ! -n ${PARTITION} ]]
 then	PARTITION="<default>"
 fi
 
-echo "
-#---------TERM---------#
-    Opening a Term  
-    $(date +%y/%m/%d--%H:%M) 
+if	[[ ! -n ${EXCLUSIVE} ]]
+then	RESOURCES="Shared"
+else	RESOURCES="Exclusive"
+fi
 
+echo "
+#--------TERM---------#
+    Opening a term  
+    $(date +%y/%m/%d--%H:%M)"
+verbose "
 Partition : ${PARTITION}
 Nodelist  : ${NODELIST}
 Time      : ${TIME} hours
 Shell     : ${SHELL}
-#----------------------#
+Resources : ${RESOURCES}"
+info "#----------------------#
 "
 
-set -x
-srun ${CMD_TIME} ${CMD_PARTITION} ${CMD_NODELIST} --pty ${SHELL}
+if 	[[ -n ${VERBOSE} ]]
+then 	set -x
+fi
+
+srun ${CMD_TIME} ${CMD_PARTITION} ${CMD_NODELIST} ${EXCLUSIVE} --pty ${SHELL}
