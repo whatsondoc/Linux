@@ -8,13 +8,26 @@ then    echo "Cannot enumerate target directory [first positional argument to th
 else    SOURCE_FILE="${TGT_DIR}/source_file.txt"
 fi
 
-for i in {0..999}; do echo "Split hey, split ho, it's off to work we go..." >> ${SOURCE_FILE}
+for     i in {0..999}
+do      echo "Split hey, split ho, it's off to work we go..." >> ${SOURCE_FILE}
+done
 
 cd ${TGT_DIR}
+INDEX=0
+
+echo
+echo "Date:  $(date +%Y-%m-%d---%H-%M-%S)"
+echo
+echo "Starting creation ..."
+echo
 
 while true
 do
+    if      (( ${INDEX} % 10000 ))
+    then    echo "$(date +%Y-%m-%d---%H-%M-%S)   Files:  ${INDEX}"
+    fi
     split --lines=1 ${SOURCE_FILE} ${TGT_DIR}/prefix_${RANDOM}
+    ((INDEX++))
 done
 
 echo "Complete"     # This is, of course, fool's gold... 
