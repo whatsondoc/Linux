@@ -8,7 +8,7 @@ then    echo "Cannot enumerate target directory [first positional argument to th
 else    SOURCE_FILE="${TGT_DIR}/source_file.txt"
 fi
 
-for     i in {0..999}
+for     LINE in {0..999}
 do      echo "Split hey, split ho, it's off to work we go..." >> ${SOURCE_FILE}
 done
 
@@ -23,7 +23,7 @@ echo
 
 while true
 do
-    if      (( ${INDEX} % 10000 ))
+    if      (( ${INDEX} % 50 ))
     then    echo "$(date +%Y-%m-%d---%H-%M-%S)   Files:  ${INDEX}"
     fi
     split --lines=1 ${SOURCE_FILE} ${TGT_DIR}/prefix_${RANDOM}
