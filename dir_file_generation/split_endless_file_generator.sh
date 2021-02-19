@@ -23,8 +23,8 @@ echo
 
 while true
 do
-    if      ! (( ${INDEX} % 20 ))
-    then    echo "$(date +%Y-%m-%d---%H-%M-%S)   Files:  ${INDEX}"
+    if      ! (( ${INDEX} % 50 ))
+    then    echo "$(date +%Y-%m-%d---%H-%M-%S)   Files:  ${INDEX} 000"
     fi
     split --lines=1 ${SOURCE_FILE} ${TGT_DIR}/prefix_${RANDOM}
     ((INDEX++))
