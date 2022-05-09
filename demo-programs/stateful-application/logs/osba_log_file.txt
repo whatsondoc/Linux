@@ -1,0 +1,27 @@
+2021-09-05 22:43:53,090 | root | INFO -->  *** Starting OSBA data file ***
+2021-09-05 22:43:53,090 | root | INFO -->  Instance UUID     : 5P132PH7
+2021-09-05 22:43:53,090 | root | INFO -->  Timestamp         : 2021-09-05 22:43
+2021-09-05 22:43:53,090 | root | INFO -->  Data File path    : /Users/benwatson/git-repos/DataCore/vFilO/scripts/python/GFS_demo/business_application/osba_data_file.dat
+2021-09-05 22:43:53,090 | root | INFO -->  Log File path     : logs/osba_log_file.txt
+2021-09-05 22:43:53,090 | root | INFO -->  -----------------------------------------
+2021-09-05 22:43:53,090 | root | INFO -->  
+2021-09-05 22:43:53,097 | root | INFO -->  Initial bulk creation of OSBA data
+2021-09-05 22:43:53,097 | root | INFO -->  151 records added
+2021-09-05 22:43:54,692 | root | INFO -->  Option selected by user: 3
+2021-09-05 22:43:57,705 | root | INFO -->  Option selected by user: 1
+2021-09-05 22:43:57,715 | root | INFO -->  Adding new record    : wxr8dfwu1a8vjlavz9vmc66pq4far6jms3p
+2021-09-05 22:44:00,413 | root | INFO -->  Option selected by user: 
+2021-09-05 22:44:00,413 | root | INFO -->  Unrecognised option: 
+2021-09-05 22:44:05,287 | root | INFO -->  User initiated program exit
+2021-09-05 22:44:05,288 | root | INFO -->  
+2021-09-05 22:44:05,288 | root | INFO -->  [Terminating application]
+2021-09-05 22:44:05,288 | root | INFO -->  
+2021-09-05 22:44:14,027 | root | INFO -->  >>> Resuming OSBA data file <<<
+2021-09-05 22:44:14,027 | root | INFO -->  Timestamp         : 2021-09-05 22:44
+2021-09-05 22:44:17,456 | root | INFO -->  Option selected by user: 3
+2021-09-05 22:44:49,309 | root | INFO -->  Option selected by user: 1
+2021-09-05 22:44:49,320 | root | INFO -->  Adding new record    : pm6z4dsdpn3kk91yuq15fup6e9omiu5lylg
+2021-09-05 22:44:53,600 | root | INFO -->  User initiated program exit
+2021-09-05 22:44:53,600 | root | INFO -->  
+2021-09-05 22:44:53,600 | root | INFO -->  [Terminating application]
+2021-09-05 22:44:53,600 | root | INFO -->  
