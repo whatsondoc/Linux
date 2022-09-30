@@ -42,13 +42,13 @@ do 	echo "Connecting to: ${NODE}"
 	CHECK_NAME=$(ssh -o ConnectTimeout=4 ${NODE} 'hostname')
 	CHECK_CODE=${?}
 	
-	if 	[[ ${CHECK_CODE} != 0 ]]
+	if 		[[ ${CHECK_CODE} != 0 ]]
 	then	echo "${NODE} is unreachable - skipping ${EXECUTE}"
-	else 	if	[[ ${EXECUTE} == "command" ]]
-		then	ssh ${USER}@${NODE} "${INPUT}"
-		elif	[[ ${EXECUTE} == "transfer" ]]
-		then	scp ${INPUT} ${USER}@${NODE}:${INPUT}
-		fi
+	else 	if		[[ ${EXECUTE} == "command" ]]
+			then	ssh ${USER}@${NODE} "${INPUT}"
+			elif	[[ ${EXECUTE} == "transfer" ]]
+			then	scp ${INPUT} ${USER}@${NODE}:${INPUT}
+			fi
 	fi
 	echo
 done
