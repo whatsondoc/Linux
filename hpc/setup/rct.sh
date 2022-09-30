@@ -18,37 +18,37 @@ print_help() {
 	exit 1
 }
 
-if 		[[ ${1,,} == "command" ]]
-then 	EXECUTE="${1}"
+if		[[ ${1,,} == "command" ]]
+then	EXECUTE="${1}"
 		shift
 		INPUT="${@}"
-elif 	[[ ${1,,} == "transfer" ]]
-then 	EXECUTE="${1}"
+elif	[[ ${1,,} == "transfer" ]]
+then	EXECUTE="${1}"
 		INPUT=${2}
-		if 	[[ ! -f ${INPUT} ]]
-		then 	echo "File cannot be enumerated at source: ${INPUT}"
-			echo "Exiting..."
-			exit 1
+		if		[[ ! -f ${INPUT} ]]
+		then	echo "File cannot be enumerated at source: ${INPUT}"
+				echo "Exiting..."
+				exit 1
 		fi
-elif    [[ ${#} == "0" ]]
-then    print_help
-else 	echo "Unrecognised option 	${1}"
+elif	[[ ${#} == "0" ]]
+then	print_help
+else	echo "Unrecognised option 	${1}"
 		print_help
 		exit 1
 fi
 
-for NODE in ${NODES[*]}
-do 	echo "Connecting to: ${NODE}"
-	CHECK_NAME=$(ssh -o ConnectTimeout=4 ${NODE} 'hostname')
-	CHECK_CODE=${?}
-	
-	if 		[[ ${CHECK_CODE} != 0 ]]
-	then	echo "${NODE} is unreachable - skipping ${EXECUTE}"
-	else 	if		[[ ${EXECUTE} == "command" ]]
-			then	ssh ${USER}@${NODE} "${INPUT}"
-			elif	[[ ${EXECUTE} == "transfer" ]]
-			then	scp ${INPUT} ${USER}@${NODE}:${INPUT}
-			fi
-	fi
-	echo
+for 	NODE in ${NODES[*]}
+do 		echo "Connecting to: ${NODE}"
+		CHECK_NAME=$(ssh -o ConnectTimeout=4 ${NODE} 'hostname')
+		CHECK_CODE=${?}
+
+		if		[[ ${CHECK_CODE} != 0 ]]
+		then	echo "${NODE} is unreachable - skipping ${EXECUTE}"
+		else 	if		[[ ${EXECUTE} == "command" ]]
+				then	ssh ${USER}@${NODE} "${INPUT}"
+				elif	[[ ${EXECUTE} == "transfer" ]]
+				then	scp ${INPUT} ${USER}@${NODE}:${INPUT}
+				fi
+		fi
+		echo
 done
