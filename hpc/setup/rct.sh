@@ -1,6 +1,14 @@
 #!/bin/bash
 
-NODES=( localhost localhost localhost )
+NODES=( mercury 
+		venus 
+		earth 
+		mars 
+		jupiter 
+		saturn 
+		uranus 
+		neptune 
+	)
 
 print_help() {
 	echo
